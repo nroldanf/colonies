@@ -118,13 +118,14 @@ def corr2d(I_gray,t_name,folder,name,ind):
 def pozos(I_gray,coordinates,r):
     h,w = I_gray.shape
     I_new = np.zeros([h,w])
-    for k in range(0,len(coordinates)):
-        centro = coordinates[k][:]
-        for i in range(0,h):
-            for j in range(0,w):
-                d = np.sqrt( abs( (centro[0] - i)**2 + (centro[1] - j)**2 ) ) 
-                if d <= r:
-                    I_new[i,j] = I_gray[i,j]
+    r = 130
+    for i in range(0,h):
+        for j in range(0,w):
+            x = coord[:,0] - i
+            y = coord[:,1] - j
+            d  = np.sqrt(abs( np.square(x) + np.square(y) ))
+            if any(d <= r):
+                I_new[i,j] = I_gray[i,j]
 #    fig = plt.figure()
 #    ax1 = fig.add_subplot(111)
 #    ax1.axis('off')
