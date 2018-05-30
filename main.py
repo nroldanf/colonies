@@ -224,3 +224,16 @@ def conectividad(m_BW,sel):
     else:
         pass
     return labeled,cont
+
+
+#----------Generador del template con radio r -------------
+def circle(r):
+    dim = r*2 + 5
+    Nigerrimo = np.zeros([dim,dim])
+    centro = [dim/2,dim/2]
+    for i in range(0,120):
+        for j in range(0,120):
+            d = np.sqrt(abs( (centro[0] - i)**2 + (centro[1] - j)**2 ))
+            if d < r:
+                Nigerrimo[i,j] = 1
+    return Nigerrimo
