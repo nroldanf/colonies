@@ -5,6 +5,7 @@ Created on Wed May 23 10:54:20 2018
 @author: Nicolas
 """
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import os
 import numpy as np
 import scipy
@@ -19,7 +20,8 @@ from skimage.feature import match_template
 
 from skimage.filters.thresholding import threshold_otsu,threshold_adaptive
 from skimage.exposure import rescale_intensity
-
+from skimage.measure import label,regionprops
+from skimage.color import label2rgb
 
 # In[]
 #plt.close('all')
@@ -372,4 +374,30 @@ def circle(r):
                 Nigerrimo[i,j] = 1
     return Nigerrimo
 
+# In[]
 
+def intento(image,image_1):
+    # Etiquetar regiones de la imagen
+    labeled = label(image_1)#image_1 = imagen sin artefactos 
+    labeled_RGB = label2rgb(labeled,image = image)#image = imagen original
+    
+    # Tomar imágenes con areas mayores a X
+    for region in regionprops (labeled):
+        min_row,min_col,max_row,max_col = region.bbox #bounding box
+        caja = mpatches.Rectangle((minc, minr), maxc-minc, maxr-minr, fill=False, edgecolor='red', linewidth=2)
+        # Graficar cajas
+        ax.add_patch(caja)
+        ax.set_axis_off()
+        plt.tight_layout()
+        plt.show()
+        
+        area_caja = region.bbox_area #Numero de pixeles de la caja
+        H,J = region.convex_image #Envolvente binarizada (mismo tamaño que bbox)
+        area_convexa = region.convex_area # Numero de pixeles dentro de la envolvente convexa
+        solidez = region.solidity #Razon entre pixeles de la region y pixeles de la envolvente
+        eje_mayor = region.major_axis_length
+        eje_menor = region.minor_axis_length
+        axes_ratio = eje_mayor/eje_menor
+            
+            
+            
