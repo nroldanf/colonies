@@ -384,7 +384,7 @@ def intento(image,image_1):
     # Tomar imágenes con areas mayores a X
     for region in regionprops (labeled):
         min_row,min_col,max_row,max_col = region.bbox #bounding box
-        caja = mpatches.Rectangle((minc, minr), maxc-minc, maxr-minr, fill=False, edgecolor='red', linewidth=2)
+        caja = mpatches.Rectangle((min_col, min_row), max_col-min_col, max_row-min_row, fill=False, edgecolor='red', linewidth=2)
         # Graficar cajas
         ax.add_patch(caja)
         ax.set_axis_off()
