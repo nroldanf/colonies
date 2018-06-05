@@ -375,29 +375,69 @@ def circle(r):
     return Nigerrimo
 
 # In[]
-
-def intento(image,image_1):
+def intento(I_rgb,Iseg):
     # Etiquetar regiones de la imagen
-    labeled = label(image_1)#image_1 = imagen sin artefactos 
-    labeled_RGB = label2rgb(labeled,image = image)#image = imagen original
-    
+    labeled,num = label(Iseg,return_num = True)#image_1 = imagen sin artefactos 
+    # Remueve los objetos que tengan menos de 7 pixeles
+#    Iseg2  = remove_small_objects(labeled,min_size=7,connectivity=8)
+#    labeled = label(Iseg2,connectivity = 2)
+    labeled_RGB = label2rgb(labeled,image = I_rgb)#image = imagen original
+    i = 1
+    I_axes = np.copy(labeled)
+    I_areaConv = np.copy(labeled)
+    I_solid = np.copy(labeled)
     # Tomar imágenes con areas mayores a X
     for region in regionprops (labeled):
-        min_row,min_col,max_row,max_col = region.bbox #bounding box
-        caja = mpatches.Rectangle((min_col, min_row), max_col-min_col, max_row-min_row, fill=False, edgecolor='red', linewidth=2)
-        # Graficar cajas
-        ax.add_patch(caja)
-        ax.set_axis_off()
-        plt.tight_layout()
-        plt.show()
-        
-        area_caja = region.bbox_area #Numero de pixeles de la caja
-        H,J = region.convex_image #Envolvente binarizada (mismo tamaño que bbox)
+        minr,minc,maxr,maxc = region.bbox #bounding box
+        caja = mpatches.Rectangle((minc,minr),maxc-minc,maxr-minr,fill=False,edgecolor='red',linewidth=2)
+        # Graficar cajas        
+#        area_caja = region.bbox_area #Numero de pixeles de la caja
+#        H,J = region.convex_image #Envolvente binarizada (mismo tamaño que bbox)
         area_convexa = region.convex_area # Numero de pixeles dentro de la envolvente convexa
         solidez = region.solidity #Razon entre pixeles de la region y pixeles de la envolvente
         eje_mayor = region.major_axis_length
-        eje_menor = region.minor_axis_length
-        axes_ratio = eje_mayor/eje_menor
+        eje_menor = region.minor_axis_length 
+        if   eje_menor != 0:            
+            axes_ratio = eje_mayor/eje_menor
+        else:
+            axes_ratio = 0
+        if axes_ratio < 1:
+            I_axes[labeled == i] = 0
+        if area_convexa < 7:
+            I_areaConv[labeled == i] = 0 
+        if solidez < 0.54:
+            I_solid[labeled == i] = 0
+        i += 1
+    print('conteo inicial:', num)  
+    
+    fig,ax = plt.subplots(1)
+    ax.imshow(labeled_RGB,cmap='gray')
+    ax.add_patch(caja)
+    ax.set_axis_off()
+    plt.tight_layout()
+    plt.title('Etiquetado de la imagen original')
+    plt.show()
+    return I_axes,I_areaConv,I_solid
+
+I_axes,I_areaConv,I_solid = intento(I,I_crop)
+# Marcación 
+I_axesRGB = label2rgb(I_axes,image = I_gray)
+I_areaConvRGB = label2rgb(I_axes,image = I_gray)
+I_solidRGB = label2rgb(I_axes,image = I_gray)
+# Conteo total
+print('conteo 1:', max(np.ravel(I_axes)))
+print('conteo 2:', max(np.ravel(I_areaConv)))
+print('conteo 3:', max(np.ravel(I_solid)))
+
+I_final = I_axes * I_areaConv * I_solid
+I_finalRGB = label2rgb(I_final,image = I_gray)
+fig,ax = plt.subplots(1)
+#ax.imshow(I_axesRGB,cmap='gray')
+ax.imshow(I_finalRGB,cmap='gray')
+ax.set_axis_off()
+plt.tight_layout()
+plt.title('Etiquetado final')
+plt.show()
             
             
             
