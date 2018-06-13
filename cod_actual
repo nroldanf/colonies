@@ -1,38 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed May 23 10:54:20 2018
+Created on Sun Jun 10 16:20:43 2018
 
 @author: Nicolas
 """
+
+#Librerias
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import os
 import numpy as np
 import pandas as pd
-#import scipy
-
+import math
+#-Mejora de contraste-
 from skimage.io import imread
-from skimage.color import rgb2gray
-from scipy.ndimage import gaussian_filter
-
-#--AGREGAR AL CÓDIGO ORIGINAL--
-from skimage.feature import match_template,peak_local_max,canny
-#from skimage.feature import match_template
-
-from skimage.filters.thresholding import threshold_otsu,threshold_yen,threshold_isodata,threshold_li
-from skimage.filters.thresholding import threshold_mean,threshold_triangle,threshold_niblack,threshold_sauvola
-
+from skimage.color import rgb2gray,rgb2lab
 from skimage.exposure import rescale_intensity
-from skimage.measure import label,regionprops
-from skimage.morphology import erosion, dilation, opening, closing, white_tophat
-from skimage.morphology import remove_small_objects,binary_dilation,disk
+from skimage.feature import match_template,peak_local_max,canny
+from skimage.morphology import dilation, closing
+from skimage.morphology import remove_small_objects,binary_dilation
+from skimage.morphology import disk,ball,diamond
+from skimage.filters.thresholding import threshold_otsu
 from skimage.color import label2rgb
+from skimage.measure import label,regionprops
 
-#PCA e ICA
-from numpy import linalg as LA
-from pandas import Series,DataFrame
-# In[]
-#plt.close('all')
+# In[Carga de los nombres de las imágenes]
 gen = 'Imagenes/'
 folder_ids = os.listdir(gen)
 #ID's de las imágenes
@@ -40,510 +32,102 @@ image_ids = list()
 #Creacíon de una matriz que contenga todos los ids, donde por cada fila hay 1 carpeta.
 for i in range(0,len(folder_ids)):
     image_ids.insert(i, os.listdir(gen + folder_ids[i] + '/') )
-    
 
-r_small = 50
-r_pozo = 140
-template = circle(r_small)
-
-#PATH = gen + folder_ids[0] + '/' + image_ids[0][3]
-#I = imread(PATH)
-#I_gray = rgb2gray(I)
-#I_gray = rescale_intensity(I_gray,in_range=(0.2,0.6),out_range=(0,1))
-#
-#prom = np.median(I_gray)
-#
-#t1 = threshold_yen(I_gray)*prom
-#t2 = threshold_otsu(I_gray)*prom
-#t3 = threshold_isodata(I_gray)*prom
-#t4 = threshold_li(I_gray)*prom
-#
-#BW5 = threshold_niblack(I_gray, window_size=15, k=0.2)
-#BW6 = threshold_sauvola(I_gray, window_size=15, k=0.2, r=None)
-##t5 = threshold_otsu(BW5)
-##t6 = threshold_otsu(BW6)
-#t7 = threshold_triangle(I_gray)*prom
-#t8 = threshold_mean(I_gray)*prom
-#
-#
-#BW1 = I_gray < t1;BW2 = I_gray < t2;BW3 = I_gray < t3;BW4 = I_gray < t4;
-#BW7 = I_gray < t7;BW8 = I_gray < t8;
-#
-#fig,(ax_or, ax_mod) = plt.subplots(1, 2)
-#ax_or.imshow(BW1,cmap='gray')
-#ax_or.set_title('Original')
-#ax_or.axis('off')
-#ax_mod.imshow(I_gray,cmap='gray');
-#ax_mod.set_title('PCA')
-#ax_mod.axis('off')
-#fig.show()
-#
-#fig,(ax_or, ax_mod) = plt.subplots(1, 2)
-#ax_or.imshow(BW3,cmap='gray')
-#ax_or.set_title('Original')
-#ax_or.axis('off')
-#ax_mod.imshow(BW4,cmap='gray');
-#ax_mod.set_title('PCA')
-#ax_mod.axis('off')
-#fig.show()
-#
-#
-#
-#fig,(ax_or, ax_mod) = plt.subplots(1, 2)
-#ax_or.imshow(BW5,cmap='gray')
-#ax_or.set_title('Original')
-#ax_or.axis('off')
-#ax_mod.imshow(BW6,cmap='gray');
-#ax_mod.set_title('PCA')
-#ax_mod.axis('off')
-#fig.show()
-#
-#
-#fig,(ax_or, ax_mod) = plt.subplots(1, 2)
-#ax_or.imshow(BW7,cmap='gray')
-#ax_or.set_title('Original')
-#ax_or.axis('off')
-#ax_mod.imshow(BW8,cmap='gray');
-#ax_mod.set_title('PCA')
-#ax_mod.axis('off')
-#fig.show()
+r_small = 50#Radio del círculo pequeño
+r_pozo = 140#Radio del pozo
+template = circle(r_small)#Template para la correlación
+s = diamond(4)#elemento estructurante
 # In[]
-#-------------------------------------# 
-#for i in range(0,len(folder_ids)):
-i = 0
-dic = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],'Pozo 5':[],'Pozo 6':[]}
-for j in range(0,len(image_ids[i])):
-    PATH = gen + folder_ids[i] + '/' + image_ids[i][j]
-    I = imread(PATH)
-    I_gray = rgb2gray(I)
-    edges = canny(I_gray,sigma=0.05)
-    s = disk(4)
-    #edges = dilation(edges,s)
-    edges = closing(edges,s)
-    centros = corr2d(edges,template,r_pozo)
-    I_final,dic = otsu_region(I,I_gray,140,centros,dic)
-#    I_labeled,num = label(I_final,neighbors=8, background=0,return_num=True,connectivity=2)#, connectivity=2)
-    
-    
-    fig, (ax_or,ax_fin) = plt.subplots(2,1)
-    ax_or.imshow(I)
-    ax_or.set_title('Original')
-    ax_or.axis('off')
-    ax_fin.imshow(I_final,cmap='gray')
-    ax_fin.set_title('Procesada')
-    ax_fin.axis('off')
-    for l in range(0,len(centros)):
-        ax_or.plot(centros[l][0],centros[l][1],'ro')
-    fig.show()
-#    fig.savefig('Resultados/' + 'Metodo_uno/' + folder_ids[i] + '/' + image_ids[i][j])
-#print(i)
-frame_test = pd.DataFrame(dic,index=image_ids[i])
-frame_test.to_csv('Resultados/' + folder_ids[i] + '.csv')
-
-#abrir un archivo .csv que contenga los conteos proporcionados
-#para validar de manera automática.
-
-# In[] PCA
-
-def PCA(m_I):
-    '''
-    Función que realiza PCA mediante SDV (Singular Decomposition Value) para
-    obtener el plano de mayor información en una imagen.
-    
-    m_I: Imagen en RGB.
-    
-    Retorna IMG: Imagen de igual dimensión que contienen la mayor información
-    escalada entre 0-1.
-    '''
-    dim = m_I.shape
-    X = np.asarray([m_I[:,:,0].ravel(),m_I[:,:,1].ravel(),m_I[:,:,2].ravel()])#1 canal por fila
-    S = np.cov(X)
-    U,V = LA.eig(S)
-    V2 = V[np.argmax(U),:]
-    Y = np.matmul(V2,X)
-    IMG = ( 1- np.reshape(Y,(dim[0],dim[1])) )/256
-    return IMG
-
-#NO SIEMPRE HAY QUE INVERTIRLA, ¿CÓMO SABER LA FASE?
-    
-#IMG = PCA(I)
-#
-#fig,(ax_or, ax_mod) = plt.subplots(1, 2)
-#ax_or.imshow(I_gray,cmap='gray')
-#ax_or.set_title('Original')
-#ax_or.axis('off')
-#ax_mod.imshow(IMG,cmap='gray');
-#ax_mod.set_title('PCA')
-#ax_mod.axis('off')
-#fig.show()
-
-
-# In[]
-
-template = circle(r_small)
-edges = canny(I_gray,sigma=0.05)
-centros = corr2d(edges,template,r_pozo)
-##3 métodos
-##I_final = seg_contraste(I_gray,140,centros)
-I_final = otsu_region(I_gray,140,centros)
-#I_final = otsu_and(I_gray,140,centros)
-I_labeled,num = label(I_final,neighbors=8, background=0,return_num=True,connectivity=2)#, connectivity=2)
-# In[] Region props
-
-'''
-labels with value 0 are ignored.
-area,bbox,bbox_area,centroid,convex_area,convex_image,coords,eccentricity
-equivalent_diameter,euler_number,extent,filled_area,filled_image,image
-intensity_image,label,local_centroid
-major_axis_length,minor_axis_length
-max_intensity,mean_intensity,min_intensity
-solidity: Ratio of pixels in the region to pixels of the convex hull image.
-area/convex_area
-
-euler_number:Euler characteristic of region. Computed as number of objects (= 1)
-subtracted by number of holes (8-connectivity).
-
-extent: Ratio of pixels in the region to pixels in the total bounding box.
-        Computed as ``area / (rows * cols)`
-convex_area: Number of pixels of convex hull image.
-
-orientation: float
-        Angle between the X-axis and the major axis of the ellipse that has
-        the same second-moments as the region. Ranging from `-pi/2` to
-        `pi/2` in counter-clockwise direction.
+#plt.close('all')
+#i = 1
+#j = 3
+for i in range(3,len(folder_ids)):
+#    dic = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],'Pozo 5':[],'Pozo 6':[]}
+    for j in range(0,len(image_ids[i])):
+        print('Imagen ' + str(j))
+        PATH = gen + folder_ids[i] + '/' + image_ids[i][j]
+        I = imread(PATH)
+        I_gray = rgb2gray(I)
+        I_gray = rescale_intensity(I_gray,in_range=(0.2,0.8),out_range=(0,1))
+        BW = canny(I_gray,sigma=0.5)
+        #Operación morfológica
+        BW = closing(BW,s)
+        result = match_template(BW,template,pad_input = True)
+        coordinates = peak_local_max(result, min_distance=160)#centro del pequeño 
+        centros = corr2d(coordinates,template,r_pozo)
         
-**eccentricity** : float
-        Eccentricity of the ellipse that has the same second-moments as the
-        region. The eccentricity is the ratio of the focal distance
-        (distance between focal points) over the major axis length.
-        The value is in the interval [0, 1).
-        When it is 0, the ellipse becomes a circle.
-        
- max_intensity : float
-        Value with the greatest intensity in the region.
- min_intensity : float
-        Value with the least intensity in the region.
-        
-**coords** : (N, 2) ndarray
-        Coordinate list ``(row, col)`` of the region.
-'''
-
-#fig = plt.figure()
-#ax1 = fig.add_subplot(111)
-#ax1.axis('off')
-#ax1.imshow(I_labeled,cmap='spectral')
-
-#props = regionprops(I_labeled,intensity_image=I_final, cache=True)
-#p = ["eccentricity","major_axis_length","minor_axis_length","solidity","euler_number","coords"]#lista de propiedades
-#p2 = list()
-#for i in p:
-#    l = list()
-#    for j in range(0,num):
-#        l.append(props[j][i])
-#    p2.append(l)
-#
-#
-#for k in range(0,num):
-#    print(str( p2[k]["solidity"] ))
-#para solidez < 0.5 -> blanco
-#for in range()
-
-
-
-#fig = plt.figure()
-#ax1 = fig.add_subplot(111)
-#ax1.axis('off')
-#ax1.imshow(I_final,cmap='gray')
-
-#for i in range(0,len(centros)):
-#    ax1.plot(centros[i][0],centros[i][1],'ro')
-#fig.show()
-
-# In[] Mejora de contraste
-def seg_contraste(m_I,r,centros):
-    '''
-    m_I: Imagen en escala de grises.
-    r: Radio del pozo.
-    centros: Coordenadas de los centros de los pozos en un arreglo de numpy.
+        #Seccionamiento y segmentación
+        m = np.shape(I_gray)
+        m_BW = np.zeros([m[0],m[1]])#Imagen negra
+        for k in range(0,len(centros)):
+            I_seg = pozos(I_gray,centros[k],r_pozo)
+            I_otsu = otsu(I_seg,I_gray,centros[k],r_pozo)#mascara por pozo
+            
+            I_props = intento(I_otsu)#aplicación de las propiedades de region
+    #remoción de bordes
+#    I_color = color(I,I_gray,centros[k],r_pozo)
     
-    Retorna la máscara con las colonias segmentadas.
-    '''
-    m_I = rescale_intensity(m_I,in_range=(0.25,0.4))
-    m_I_crop = pozos2(1-m_I,centros,r)
-    return m_I_crop
-
-
-
-#r_pozo = 145
-#I_gray2 = rescale_intensity(I_gray,in_range=(0.25,0.4))
-#I_crop = seg_contraste(I_gray,140,centros)
-#
-#
-#fig, (ax_orig, ax_mask) = plt.subplots(1, 2)
-#ax_orig.imshow(I_gray, cmap='gray')
-#ax_orig.set_title('Original')
-#ax_orig.set_axis_off()
-#ax_mask.imshow(I_crop, cmap='gray')
-#ax_mask.set_title('Máscara')
-#ax_mask.set_axis_off()
-#fig.show()   
-
-# In[] Otsu por región.
-
-
-def otsu_region(I,m_I,r,centros,d):
-    '''
-    Determina un umbral por pozo. Binariza la imagen con el respectivo pozo segmentado.
-    Multiplica dicha imagen invertida (pozo negro,colonias blancas y demás blanco)
-    por una matriz de 1's (blanca) para así, obtener la segmentación de los 6 pozos.
-    Se hace uso de 6 umbrales diferentes, 1 por región.
-    
-    m_I: Imagen en escala de grises.
-    r: radio del pozo en píxeles.
-    centros: Coordenadas de los centros (x,y) en un arreglo de numpy.
-    
-    Retorna la máscara con las colonias segmentadas.
-    '''
-#    colonias = 0
-    m = np.shape(m_I)
-    m_I = rescale_intensity(m_I,in_range=(0.2,0.8),out_range=(0,1))
-    m_BW = np.ones([m[0],m[1]])#Imagen blanca
-    for k in range(0,len(centros)):
-        m_I_pozo = pozos(m_I,centros[k],r)
-        m_I_otsu = otsu(m_I_pozo,m_I,centros[k],r)
-#        #etiquetado, regionprops y conteo
-#        labeled,num = label(m_I_otsu,neighbors=8, background=0,return_num=True)
-        I_axes,num = intento(I,m_I_otsu)
-        
-##        print('Hay ' + str(num) + ' colonias en el pozo ' + str(k) + '.')
-        d[ list(d.keys())[k] ].append(num)
-##        colonias += num
-        m_BW = m_BW * I_axes
-#    print('Hay ' + str(colonias) + ' colonias en total.')
-    
-    return m_BW,d
-
-
-# In[]
-
-def otsu_and(m_I,r,centros):
-    '''
-    Determina un umbral por pozo. Binariza toda la imagen en escala de grises.
-    Multiplica dicha imagen invertida (pozo negro,colonias blancas y demás blanco)
-    por una matriz de 1's (blanca) para así, obtener la segmentación de los 6 pozos.
-    Se hace uso de 6 umbrales diferentes, 1 por región.
-    
-    m_I: Imagen en escala de grises.
-    r: radio del pozo en píxeles.
-    centros: Coordenadas (x,y) de los centros de los pozos en un arreglo de
-    numpy.
-    
-    Retorna m_I_pozo: Máscara con las colonias segmentadas en blanco.
-    '''
-    m = np.shape(m_I)
-    m_I = rescale_intensity(I_gray,in_range=(0.1,0.8))
-    m_BW = np.ones([m[0],m[1]])#Imagen blanca
-    for k in range(0,len(centros)):
-        m_I_otsu = otsu2(m_I,centros[k],r)
-        m_BW = m_BW * m_I_otsu
-    m_I_pozo = pozos2(m_BW,centros,r)
-    return m_I_pozo
-
-
-#r_pozo = 145
-#m = np.shape(I_gray)
-#I_gray1 = rescale_intensity(I_gray,in_range=(0.1,0.8))
-#I_final = np.ones([m[0],m[1]])
-#for k in range(0,len(centros)):
-#    I_otsu = otsu2(I_gray1,centros[k],r_pozo)
-#    I_final = I_final * I_otsu
-#I_crop = pozos2(I_final,centros,r_pozo)
-    
-#I_crop = otsu_and(I_gray,140,centros)
-#
-#fig, (ax_orig, ax_mask) = plt.subplots(1, 2)
-#ax_orig.imshow(1-I_gray, cmap='gray')
-#ax_orig.set_title('Original')
-#ax_orig.set_axis_off()
-#ax_mask.imshow(I_crop, cmap='gray')
-#ax_mask.set_title('Máscara')
-#ax_mask.set_axis_off()
-#fig.show() 
-# In[]
-
-def otsu(I_cro,I_gray2,centro,r):
-    I2 = I_gray2[(centro[1]-r):(centro[1]+r),(centro[0]-r):(centro[0]+r)]
-#    prom = np.mean(I2)
-    prom = np.median(I2)
-    thresh = threshold_otsu(I2)*prom
-    BW = I_cro > thresh
-    BW = 1 - BW
-    return BW
-
-def otsu2(I_gray2,centro,r):
-    I2 = I_gray2[(centro[1]-r):(centro[1]+r),(centro[0]-r):(centro[0]+r)]
-    prom = np.mean(I2)
-    thresh = threshold_otsu(I2)*prom
-    BW = I_gray2 > thresh
-    BW = 1 - BW
-    return BW
-
-
-# In[] Correlación cruzada normalizada de skimage
-def corr2d(BW,template,r_pozo):
-    '''
-    Realiza la correlación cruzada normalizada [1] con una imagen template.
-    
-    BW: Imagen con los bordes segmentados.
-    template: Imagen con el template para realizar la correlación.
-    r_pozo: Radio del pozo en píxeles.
-    
-    
-    Retorna centros: Arreglo de coordenadas (x,y) con los centros de los pozos
-    ubicados en el siguiente orden.
-
-    |0 2 4|
-    |1 3 5|
-    
-    
-    [1] J. P. Lewis, “Fast Normalized Cross-Correlation”,
-    Industrial Light and Magic.    
-    '''
-    result = match_template(BW,template,pad_input = True)
-    coordinates = peak_local_max(result, min_distance=160)#centro del pequeño 
-    #podría reeemplazar el if-else:
-#    coordinates = np.sort(coordinates, axis=1, kind='quicksort', order=None)
-    if coordinates[0][1] < coordinates[1][1]:
-        y = coordinates[0][0]-r_pozo-5
-        x = coordinates[0][1]+r_pozo+5
-    else:
-        y = coordinates[1][0]-r_pozo-5
-        x = coordinates[1][1]+r_pozo+5
-    #coordenadas de los otros pozos por simetría
-    centros = [[x,y],[x,y+2*r_pozo + 12]]
-    for i in range(0,2):
-        centros.append([centros[i][0] + 2*r_pozo+7,centros[i][1] ])
-        centros.append([centros[i][0] - 2*r_pozo-7,centros[i][1] ])
-    
-    centros = sorted(centros)
-    centros = np.asarray(centros)#(x,y)
-    
-#    fig, (ax_orig, ax_template, ax_corr) = plt.subplots(1, 3)
-#    fig = plt.figure()
-#    ax_orig = fig.add_subplot(111)
-##    ax_orig.imshow(I_gray, cmap='gray')
-#    ax_orig.imshow(BW, cmap='gray')
-#    ax_orig.set_title('Original')
-#    ax_orig.set_axis_off()
-##    ax_template.imshow(template, cmap='gray')
-##    ax_template.set_title('Template')
-##    ax_template.set_axis_off()
-##    ax_corr.imshow(result, cmap='gray')
-##    ax_corr.set_title('Correlación cruzada')
-##    ax_corr.set_axis_off()
-##    for i in range(0,len(coordinates)):
-##        ax_orig.plot(coordinates[i,1], coordinates[i,0], 'ro')
-#    for i in range(0,len(centros)):
-#        ax_orig.plot(centros[i][0],centros[i][1],'ro')
-#    fig.show()   
-#    fig.savefig('Resultados_template/' + folder + '/' + name)
-#    fig.savefig('Resultados_template/' + t_name + '/' + folder + '/' + name)
-    return centros
-#
-#r_small = 50
-#r_pozo = 140
-#template = circle(r_small)
-##IMG = PCA(I)
-#edges = canny(I_gray,sigma =0.01)
-#s = disk(4)
-##edges = dilation(edges,s)
-#edges = closing(edges,s)
-#centros = corr2d(edges,template,r_pozo)
-#result = match_template(edges,template,pad_input = True)
-#coordinates = peak_local_max(result, min_distance=160)#cen
-#
-#fig, (ax_orig, ax_template) = plt.subplots(1, 2)
-#
-#ax_orig.imshow(I_gray, cmap='gray')
-#ax_orig.set_title('Original')
-#ax_orig.set_axis_off()
-#ax_template.imshow(edges, cmap='gray')
-#ax_template.set_title('Template')
-#ax_template.set_axis_off()
-#for i in range(0,len(coordinates)):
-#    ax_orig.plot(coordinates[i,1], coordinates[i,0], 'ro')
-#for i in range(0,len(centros)):
-#    ax_orig.plot(centros[i][0],centros[i][1],'ro')
-#fig.show()   
-
-
-# In[] Seccionamiento por medio de distancia euclideana
-
-
-#-Entradas: Imagen en escala de grises I_gray, coordenadas de los centros
-#coordinates, las dimensiones más pequeñas dim como una lista de 2, y el radio.
-#-Salidas: Imagen con los pozos seccionados I_new y grafica la imagen resultado.
-#Las coordenadas deben ser especificadas en la forma (x,y) en un arreglo de np.
-#
-def pozos2(m_I,centros,r):
-    '''
-    Secciona los pozos de forma tal que para todo píxel P(i,j) que se encuentre 
-    a una distancia d menor o igual a r, donde d se evalua para todos los 
-    centros de los pozos, se conserve su valor original en escala de grises.
-    De lo contrario, se le asigna un valor de 0 (Blanco).
-    
-    m_I: Imagen de 1 dimensión.
-    centros: Coordenadas de los centros de los pozos (x,y) en un arreglo de np.
-    r: Radio del pozo en píxeles.
-    
-    Retorna I_new: Imagen con los pozos seccionados.
-    
-    '''
-    h,w = m_I.shape
-    I_new = np.ones([h,w])
-    for i in range(0,h):
-        for j in range(0,w):
-            x = centros[:,0] - j
-            y = centros[:,1] - i
-            d  = np.sqrt(abs( np.square(x) + np.square(y) ))
-            if any(d <= r):
-                I_new[i,j] = m_I[i,j]
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
-    ax1.axis('off')
-    ax1.imshow(I_new,cmap='gray')
-    return I_new
-
-
-
-def pozos(m_I,centro,r):
-    '''
-    
-    Secciona 1 pozo de forma tal que para todo píxel P(i,j) que se encuentre 
-    a una distancia d menor o igual a r, se conserve su valor original en 
-    escala de grises, de lo contrario, se le asigna un valor de 0 (Blanco).
-    
-    m_I: Imagen de 1 dimensión.
-    centros: Coordenadas de los centros de los pozos (x,y) en un arreglo de np.
-    r: Radio del pozo en píxeles.
-    
-    Retorna I_new: Imagen con los pozos seccionados.
-    
-    '''
-    h,w = m_I.shape
-    I_new = np.zeros([h,w])
-    for i in range(0,h):
-        for j in range(0,w):
-            d = np.sqrt( abs( (centro[1] - i)**2 + (centro[0] - j)**2 ) ) 
-            if d <= r:
-                I_new[i,j] = m_I[i,j]
-
 #    fig = plt.figure()
 #    ax1 = fig.add_subplot(111)
-#    ax1.axis('off')
-#    ax1.imshow(I_new,cmap='gray')
-    return I_new
-# In[] 
+#    ax1.imshow(I_color,cmap='gray')
+#    fig.show()
+    
+#    I_fin = I_props * I_color
+
+#    labeled,num = label(I_fin,neighbors=8, background=0,return_num=True,connectivity=10)#etiquetado y conteo
+#    print('Hay ' + str(num) + ' colonias en el pozo ' + str(k) + '.')
+#    dic[ list(dic.keys())[k] ].append(num)
+
+            m_BW = m_BW + I_props
+
+        I_color = color(I,I_gray,centros,r_pozo)
+        m_BW = m_BW * I_color
+
+#labeled = label(m_BW,neighbors=8, background=0)#etiquetado y conteo
+#labeled_RGB = label2rgb(labeled,image = I)#image = imagen original
+
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)      
+        ax1.axis('off')
+        ax1.imshow(m_BW,cmap='gray')#,cmap='gray')
+        #        for l in range(0,len(centros)):
+        #            ax1.plot(centros[l][0],centros[l][1],'ro')
+        #        for l in range(0,len(coordinates)):
+        #            ax1.plot(coordinates[l][1],coordinates[l][0],'ro')
+        fig.show()
+        fig.savefig('Resultados/' + 'Sin_Bordes/' + folder_ids[i] + '/' + image_ids[i][j])
+#frame_test = pd.DataFrame(dic,index=image_ids[i])
+#frame_test.to_csv('Resultados/' + folder_ids[i] + '.csv')
+
+#sigues ahí??? era unde ide
+
+
+''' error ntaciòn yap bueno veamos quedo besho, guapo qyedo guaperrìmo QuQ
+sòlo que ahora se demora el doble, no me imagino cuanto se demorara 
+cuando lo corrigamos, sera rapido ten fe, quiero ver como funciona en los
+computadores de PSIM, 2 seg ajajajjaja u_u mi ,co mpen los de bioi 8 horas XD
+jajajajaja en serio? a mi se me hacen iguales jajajja espera a que veas control
+per genial :') parece un payaso asi jajajaaj <:.) un payasito de nariz torcida
+lo imperfecto nos hace perfectos, nos hace humanos diría yo, el payaso plin plin 
+no es humano es depredador o: oO correee nuestra única esperanza es Arnold swasagageac
+swagseneger
+creo que con la 3 si podríamos ver el alcance de todo lo que acabamos de hcer
+vi un papa ahhh Sí xDDDDDDD no te vayas a enojar, entonces no me muestres :s
+no es nada raro, ni nada blasfemo diría yo es chistoso. no se jajajaja no sabes que?
+que es ? si chistoso o que, conoces a Richard Feynmann? si es el bum de los fisicos
+pero pues no se, hay 5 papa que tienen estudio en fisica y astronomia
+en serio?, si muchos son fisico o: pues a mi se me hizo gracioso porque esos
+libros son como la biblia de la Física teórica lo se sheldon lo ama
+cómo no hacerlo? es demasiado genialoso ???? qué? te las dejo ver si me muestras
+una tuyas así ... no tengo khe? D: qué pena, a mi no me gustan lass fotos
+
+- Parece cómo si rgb2gray cortase la imagen, pero sólo pasa al visualizarla.
+- Las imágenes del 04-09-15 están inclinadas.
+- Problemas de tamaño con la carpeta 11-09-15 (Imagen 7) y con una imagen de
+la carpeta 04-09-15.
+'''
+# In[Funciones]
 
 def circle(r):
     '''
@@ -559,39 +143,81 @@ def circle(r):
     for i in range(0,dim):
         for j in range(0,dim):
             d = np.sqrt(abs( (centro[0] - i)**2 + (centro[1] - j)**2 ))
-            if d > r and d < r+5:
+            if d > r and d < r+4:
                 Nigerrimo[i,j] = 1
     return Nigerrimo
 
-#circulin = circle(50)
-#
-#fig = plt.figure()
-#ax1 = fig.add_subplot(111)
-#ax1.axis('off')
-#ax1.imshow(circulin,cmap='gray')
+def corr2d(coordinates,template,r_pozo):
+    '''
+    Realiza la correlación cruzada normalizada [1] con una imagen template.
+    
+    BW: Imagen con los bordes segmentados.
+    template: Imagen con el template para realizar la correlación.
+    r_pozo: Radio del pozo en píxeles.
+    
+    
+    Retorna centros: Arreglo de coordenadas (x,y) con los centros de los pozos
+    ubicados en el siguiente orden.   
+    '''
+    #podría reeemplazar el if-else:
+#    coordinates = np.sort(coordinates, axis=1, kind='quicksort', order=None)
+    if coordinates[0][1] < coordinates[1][1]:
+        y = coordinates[0][0]-r_pozo-5
+        x = coordinates[0][1]+r_pozo+5
+    else:
+        y = coordinates[1][0]-r_pozo-5
+        x = coordinates[1][1]+r_pozo+5
+    #coordenadas de los otros pozos por simetría
+    centros = [[x,y],[x,y+2*r_pozo + 10]]
+    for i in range(0,2):
+        centros.append([centros[i][0] + 2*r_pozo + 10 ,centros[i][1] ])
+        centros.append([centros[i][0] - 2*r_pozo - 10,centros[i][1] ])
+    
+    centros = sorted(centros)
+    centros = np.asarray(centros)#(x,y)
+    
+    return centros
 
 
-# In[]
-def intento(I_rgb,Iseg):
-    # Etiquetar regiones de la imagen
-    labeled = label(Iseg)#image_1 = imagen sin artefactos 
-    # Remueve los objetos que tengan menos de 7 pixeles
-#    Iseg2  = remove_small_objects(labeled,min_size=7,connectivity=8)
-#    labeled = label(Iseg2,connectivity = 2)
-    labeled_RGB = label2rgb(labeled,image = I_rgb)#image = imagen original
+def pozos(m_I,centro,r):
+    '''
+    Secciona 1 pozo de forma tal que para todo píxel P(i,j) que se encuentre 
+    a una distancia d menor o igual a r, se conserve su valor original en 
+    escala de grises, de lo contrario, se le asigna un valor de 0 (Blanco).
+    
+    m_I: Imagen de 1 dimensión.
+    centros: Coordenadas de los centros de los pozos (x,y) en un arreglo de np.
+    r: Radio del pozo en píxeles.
+    
+    Retorna I_new: Imagen con los pozos seccionados.
+    '''
+    h,w = m_I.shape
+    I_new = np.zeros([h,w])
+    for i in range(0,h):
+        for j in range(0,w):
+            d = math.sqrt( abs( (centro[1] - i)**2 + (centro[0] - j)**2 ) ) 
+            if d <= r:
+                I_new[i,j] = m_I[i,j]
+    return I_new
+
+
+
+def otsu(I_cro,I_gray2,centro,r):
+    I2 = I_gray2[(centro[1]-r):(centro[1]+r),(centro[0]-r):(centro[0]+r)]
+    prom = np.mean(I2)
+    thresh = threshold_otsu(I2)*prom
+    BW = I_cro > thresh
+    BW = 1 - BW
+    return BW
+
+
+def intento(Iseg):
+    labeled = label(Iseg,neighbors=8, background=0)
     i = 1
-    I_axes = np.copy(labeled)
-#    I_areaConv = np.copy(labeled)
-#    I_solid = np.copy(labeled)
     # Tomar imágenes con areas mayores a X
     for region in regionprops (labeled):
-        minr,minc,maxr,maxc = region.bbox #bounding box
-        caja = mpatches.Rectangle((minc,minr),maxc-minc,maxr-minr,fill=False,edgecolor='red',linewidth=2)
-        # Graficar cajas        
-#        area_caja = region.bbox_area #Numero de pixeles de la caja
-#        H,J = region.convex_image #Envolvente binarizada (mismo tamaño que bbox)
         area_convexa = region.convex_area # Numero de pixeles dentro de la envolvente convexa
-        solidez = region.solidity #Razon entre pixeles de la region y pixeles de la envolvente
+#        solidez = region.solidity #Razon entre pixeles de la region y pixeles de la envolvente
         eje_mayor = region.major_axis_length
         eje_menor = region.minor_axis_length 
         if   eje_menor != 0:            
@@ -599,44 +225,104 @@ def intento(I_rgb,Iseg):
         else:
             axes_ratio = 0
             
-        if axes_ratio < 1:
-            I_axes[labeled == i] = 0
-        if area_convexa < 7:
-            I_axes[labeled == i] = 0 
-        if solidez < 0.54:
-            I_axes[labeled == i] = 0
+        if area_convexa < 7 and axes_ratio < 1 or area_convexa > 80: 
+            Iseg[labeled == i] = 0
+
         i += 1
-#    print('conteo inicial:', num)  
-    num = np.ravel(I_axes)
+
     
-#    fig,ax = plt.subplots(1)
-#    ax.imshow(labeled_RGB,cmap='gray')
-#    ax.add_patch(caja)
-#    ax.set_axis_off()
-#    plt.tight_layout()
-#    plt.title('Etiquetado de la imagen original')
-#    plt.show()
-    
-    return I_axes,num
+    return Iseg
 
 
-##I_final = otsu_region()
-##I_axes,I_areaConv,I_solid = intent(I,I_crop)
-## Marcación 
-#I_axesRGB = label2rgb(I_axes,image = I_gray)
-#I_areaConvRGB = label2rgb(I_axes,image = I_gray)
-#I_solidRGB = label2rgb(I_axes,image = I_gray)
-## Conteo total
-#print('conteo 1:', max(np.ravel(I_axes)))
-#print('conteo 2:', max(np.ravel(I_areaConv)))
-#print('conteo 3:', max(np.ravel(I_solid)))
+def pozos3(m_I,centro,r):
+    h,w = m_I.shape
+    I_new = np.ones([h,w])#matriz blanca
+    prom = []
+    for i in range(0,h):
+        for j in range(0,w):
+            x = centros[:,0] - j
+            y = centros[:,1] - i
+            d  = np.sqrt(abs( np.square(x) + np.square(y) ))
+            if any ( np.logical_and(d <= r,d >= r - 20) ):
+                I_new[i,j] = m_I[i,j]
+                prom.append([i,j])
+    return I_new,prom
 #
-##I_final = I_axes * I_areaConv * I_solid
-#I_finalRGB = label2rgb(I_final,image = I_gray)
-#fig,ax = plt.subplots(1)
-##ax.imshow(I_axesRGB,cmap='gray')
-#ax.imshow(I_finalRGB,cmap='gray')
-#ax.set_axis_off()
-#plt.tight_layout()
-#plt.title('Etiquetado final')
-#plt.show()
+
+
+#    h,w = m_I.shape
+#    I_new = np.zeros([h,w])
+#    prom = []
+#    for i in range(0,h):
+#        for j in range(0,w):
+#            d = math.sqrt( abs( (centro[1] - i)**2 + (centro[0] - j)**2 ) ) 
+#            if d <= r and d >= r-20:
+#                I_new[i,j] = m_I[i,j]
+#                prom.append([i,j])
+#    return I_new,prom
+
+
+#def pozos3(m_I,centro,r):
+
+#    h,w = m_I.shape
+#    I_new = np.ones([h,w])#matriz blanca
+#    prom = []
+#    for i in range(0,h):
+#        for j in range(0,w):
+#            x = centros[:,0] - j
+#            y = centros[:,1] - i
+#            d  = np.sqrt(abs( np.square(x) + np.square(y) ))
+#            if any ( np.logical_and(d <= r,d >= r - 20) ):
+#                I_new[i,j] = m_I[i,j]
+#                prom.append([i,j])
+#    return I_new,prom
+
+# In[]
+
+    
+def color(I,I_gray,centros,r_pozo):
+    I_bordes,prom = pozos3(I_gray,centros,r_pozo)
+    I2 = np.copy(I)
+    I2[:,:,0],prom = pozos3(I[:,:,0],centros,r_pozo)
+    I2[:,:,1],prom = pozos3(I[:,:,1],centros,r_pozo)
+    I2[:,:,2],prom = pozos3(I[:,:,2],centros,r_pozo)
+
+    promcito = np.asarray(prom)#vuelvo arreglo la lista de listas prom
+
+    I_color = rgb2lab(I2,illuminant='D65',observer='2')
+    m = np.shape(I_color[:,:,0])
+#seccionar -> color -> promedio (mean)
+#for i 
+    promedio = [ np.mean( I_color[promcito[:,0],promcito[:,1],1] ) , np.mean( I_color[promcito[:,0],promcito[:,1],2] ) ]
+#umbral = 5
+    IRGB = rgb2gray(I)
+#    IRGB = np.copy(rgb2gray(I))
+#IRGB = pozos2(IRGB,centros,r_pozo) 
+#for umbral in umbral:
+    umbral = 5
+    for i in range(0,m[0]):
+        for j in range(0,m[1]):
+            pix = I_color[i,j,1::]
+            dist = np.linalg.norm(promedio - pix)
+            if dist < umbral:
+                IRGB[i,j] = 1
+            
+    IRGB = 1 - IRGB
+    IRGB = IRGB > 0.7
+    I_fin = (I_bordes + IRGB) > 0.9
+
+#    fig = plt.figure()
+#    ax1 = fig.add_subplot(111)      
+#    ax1.axis('off')
+#    ax1.imshow(I_fin,cmap='gray')
+    
+    return I_fin
+
+I_def = color(I,I_gray,centros,r_pozo)
+
+fig = plt.figure()
+ax1 = fig.add_subplot(111)      
+ax1.axis('off')
+ax1.imshow(I_def,cmap='gray')
+
+#I_lol = color(I,I_gray,centros)
