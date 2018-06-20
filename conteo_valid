@@ -1,0 +1,26 @@
+dic = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],'Pozo 5':[],'Pozo 6':[]}
+i = 1#Carpeta seleccionada para validar 
+for j in range(0,len(image_ids[i])):
+    PATH = gen + folder_ids[i] + '/' + image_ids[i][j]
+    I = imread(PATH)
+    
+    #Se despliega una imagen para que el conteo se pueda hacer por pozo.
+    for k in range(0,6):
+        plt.close('all')
+        
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+        ax1.axis('off')
+        ax1.imshow(I,cmap='gray')
+        fig.show()
+            
+        x = plt.ginput(500,show_clicks=True,mouse_stop=1)
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    #Stop: click derecho 
+    #Pop: click izquierdo (retira el último)
+    #Select: CASÍ cualquier tecla (recomiendo ñ porque no tiene funciones)
+    #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        dic[ list(dic.keys())[k] ].append(len(x))
+
+    
+TABLA_ordenada = pd.DataFrame(dic,index=image_ids[i])
