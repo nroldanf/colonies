@@ -1,15 +1,38 @@
-.include "xc.inc"
+;*******************************************************************************
+;                                                                              *
+;    Filename:  calculadora_news.s                                             *
+;    Date:      20/06/2018                                                     *
+;    File Version: v1                                                          *
+;    Author:    	Andres Moreno, Nicolas Roldan, Natalia Suarez          *
+;    Company:   	Escuela Colombiana de Ingenieria Julio Garavito        *
+;    Description:  Calculadora en assembler de 2 numeros de 3 digitos sin signo*
+;                  Se usa el teclado matricial 4*4 donde las teclas            *
+;		   A,B,C,D,#,*  seran suma,resta,multiplicacion,divicion,igual *
+;		   y C/CE respectivamente				       *
+;*******************************************************************************
+
+;*******************************************************************************
+; Processor Inclusion
+;*******************************************************************************
+.include "P33FJ128MC802.inc"
 .equ __33FJ128MC802, 1
-;*************** MACROS *****************************
     
-;***LCD_WRITE_DATA***
+;*******************************************************************************
+; Configuration Word Setup
+;*******************************************************************************
+config __FOSC, OSCIOFNC_ON
+config __FWDT, FWDTEN_OFF  
+config __FICD, ICS_PGD2 & JTAGEN_OFF;simular en caliente (con las entradas desde el sdpic sin stimulus)
+;*******************************************************************************
+; Macros
+;*******************************************************************************
 .macro IMP_CHAR LETRA
     BSET LCD_control_port,#LCD_RS
     BCLR LCD_control_port,#LCD_RW
     MOV \LETRA,W0
     MOV W0,W1
     ;***NIBBLE MÁS SIGNIFICATIVO***
-    AND #0x00F0,W1		; valor para la mascara
+    AND #0x00F0,W1;valor para la mascara
     SL W1,#4,W1
     MOV W1,LCD_data_port
     CALL P_E
@@ -20,16 +43,14 @@
     CALL P_E
     CALL delay_150us
 .endm
-
 .macro ROTAR 
-    IMP_COT #0x18		; Cursor/Shift Display
+    IMP_COT #0x18
     CALL delay_1s
 .endm
-
 .macro IMP_NUM NUMERO
     BSET LCD_control_port,#LCD_RS
     BCLR LCD_control_port,#LCD_RW
-    MOV #0X0300,W0;*** El nibble más significativo siempre es 3***
+    MOV #0X0300,W0
     ;***NIBBLE MÁS SIGNIFICATIVO***
     MOV W0,LCD_data_port
     CALL P_E
@@ -41,7 +62,7 @@
     CALL P_E
     CALL delay_150us
 .endm
-;***ADDRESS SET***  
+    
 .macro IMP_COT LETRA
     BCLR LCD_control_port,#LCD_RS
     BCLR LCD_control_port,#LCD_RW
@@ -59,137 +80,144 @@
     CALL P_E
     CALL delay_150us
 .endm    
-;***************************************************************
-;***Constantes***
+;*******************************************************************************
+;Program Specific Constants
+;*******************************************************************************
+
 .equ LCD_EN, RA0
 .equ LCD_RS, RA1
 .equ LCD_RW, RA2
 .equ LCD_control_port, LATA
 .equ LCD_data_port, LATB
-.equ AA,W4;
-.equ BB,W6;
+.equ AA,W4
+.equ AAH,W5
+.equ BB,W6
+.equ BBH,W7
 .equ RESPDEC,W8
 .equ RESPDECH,W9
 .equ RESPUESTA,W10
 .equ RESPUESTAH,W11
 .equ CHAR_OP,W12
 .equ BANDERA,W13
-.equ CONTADOR,W14;Contador para # de números A y B
+.equ CONTADOR,W14
 .equ OP_OK,0
 .equ AA_BB_OK,1
 .equ FINISH,2
 .equ numeneg,3
-;Constantes de para los delays
+.equ RESP_CEROS,4  
+.equ AAXD,5
+
+;delays
 .equ K_10us, 11
 .equ K_150us, 183
 .equ K_10ms, 66
 .equ K_1s,6605
 .equ K_2s, 13210  
-    
+;*******************************************************************************
+;Global Declarations:
+;*******************************************************************************
+
 .global _main
-config __FOSC, OSCIOFNC_ON
-;config __FICD, ICS_PGD2 & JTAGEN_OFF;simular en caliente (con las entradas desde el sdpic sin stimulus)
+;*******************************************************************************
+;Code Section in Program Memory
+;*******************************************************************************
+
 .text
     
 _main:
-    ;**********Configuración de las entradas y salidas*************
-    ;LCD
-    MOV #0xFFF8,W0		; Control del LCD e interruptor.
+    MOV #0xFFF8,W0;salidas RA0-RA4 (RA3 INTERRUPTOR)
     MOV W0,TRISA
-    ;LCD data (RB11-RB8) y teclado (RB7-RB0)
     MOV #0xF00F,W0
     MOV W0,TRISB
-    SETM AD1PCFGL		; Configuración de entradas como digitales
-    ;***CN4-CN7***
+    SETM AD1PCFGL
     MOV #0x00F0,W0
-    MOV W0,CNPU1		; Pull-up activados.
-    MOV W0,CNEN1		; Habilitación de los pins interrupt enable.
-    
-    CALL init_LCD		; Inicialización del LCD.
-    CALL LCD_reset		; Reinicio del LCD.
-    CLR CONTADOR		; Reinicio de los WREG
-    
-    BTSC PORTA,#3		; Omite los mensajes si el interruptor
-    BRA LOOP			; está encendido.
-    ;***Mensaje***
-    CALL mensaje		; Muestra el mensaje estático
-    CALL delay_2s		; por 2 segundos.
-    CALL LCD_reset		; CLR display.
-    CALL mensaje2		; 
-    CALL delay_1s		; Muestra el mensaje por 1 segundo
-    MOV #80,W3			; para luego rotarlo 80 veces.
+    MOV W0,CNPU1
+    MOV W0,CNEN1
+    CALL init_LCD
+    CALL LCD_reset
+    CLR CONTADOR
+    BTSC PORTA,#3
+    BRA LOOP
+    CALL mensaje
+    CALL delay_2s
+    CALL LCD_reset
+    CALL mensaje2
+    CALL delay_1s
+    MOV #80,W3
 ROT:
     ROTAR
     DEC W3,W3
     BRA NZ,ROT
-    CALL delay_2s		; Muestra el mensaje por 2 segundos y
-    CALL LCD_reset		; CLR display.
+    CALL delay_2s
+    CALL LCD_reset
+
     
     
+    ; INICIA LA CALCULADORA
 LOOP:
     CLR LATB
-    BCLR IFS1,#CNIF		; Reinicia bit de interrupción
+    BCLR IFS1,#CNIF
 SLEEEP:
     BTSS IFS1,#CNIF
-    BRA SLEEEP			; Espera hasta que haya un cambio (tecla pulsada).
-    CALL delay_10ms;
-    CALL LECTURA_DISP;		; W1:números,W2:CHAR
+    BRA SLEEEP
+    CALL delay_10ms
+    CALL LECTURA_DISP
+    MOV #'*',W0
+    CP W2,W0
+    BRA Z,REINICIO
+    BTSC BANDERA,#FINISH
+    BRA REINICIO
+    CP W2,#0
+    BRA NZ,GOP
+    BRA NUMERO
     
-    MOV #'*',W0			; Verifica si se ha hecho un C/CE
-    CP W2,W0			; y acorde a ello reinicia los WREG.
-    BRA Z,REINICIO		;
-    
-    BTSC BANDERA,#FINISH	; Si está en SET ya hizo la operación
-    BRA REINICIO		; por ende, reinicia (borra el display y WREG.)
-    
-    CP W2,#0			; Si está en cero es porque lo han reiniciado.
-    
-    BRA NZ,GOP			; Salta si han ingresado por lo menos 1 número,
-				; a ejecutar la operación.
-    BRA NUMERO			; De otra forma, va a 
-;*******
-GOP:
-    MOV #'=',W0			; Va a ejecutar la operación sólo sí se ha
-    CP W0,W2			; ingresado un =, de otra forma, guarda la  
-    BRA Z, OPERACION		; operación a realizar en CHAR_OP.
-    
-    BTSC BANDERA,#OP_OK		; Si ya se ingreso la operación, se va esperar
-    BRA ANTIRREBOTE		; a que ingresen algo diferente de char(+,-,/,*).
-				
-    CLR CONTADOR		; Reinicio del contador de los números
-				; que han sido ingresados para el B (segundo).
-				
-    MOV W2,CHAR_OP		; Guarda la operación en CHAR_OP.
-    BSET BANDERA,#OP_OK		; Ya se ha ingresado una operación.
-    BCLR BANDERA,#AA_BB_OK	; 
-    IMP_CHAR CHAR_OP		; Imprime en el LCD el símbolo de la operación.
-    BRA ANTIRREBOTE		; Espera a que dejen de oprimir y luego
-				; a que ingresen algo de nuevo.
+;*******************************************************************************
+;Subroutines
+;*******************************************************************************
+
+
+GOP:;GUARDA LA OPERACION A REALIZAR SI OP_OK ES 0 Y W2 ES DIFERENTE DE '=', DE SER IGUAL SALTA A OPERACION
+    MOV #'=',W0
+    CP W0,W2
+    BRA Z, OPERACION
+    BTSC BANDERA,#OP_OK
+    BRA ANTIRREBOTE
+    CLR CONTADOR
+    MOV W2,CHAR_OP
+    BSET BANDERA,#OP_OK
+    BCLR BANDERA,#AA_BB_OK
+    IMP_CHAR CHAR_OP
+    BRA ANTIRREBOTE
 
 OPERACION:
-    BSET BANDERA,#FINISH	; La operación ya ha sido realizada.
+    BSET BANDERA,#FINISH
     
-    MOV #'+',W0			; Va y realiza la suma.
+    CP0 CHAR_OP
+    BRA Z,IGUAL 
+    
+    CP0 CONTADOR
+    BRA Z,SYNTAX_ERROR 
+    
+    MOV #'+',W0
     CP W0,CHAR_OP
     BRA Z,SUMA
     
-    MOV #'-',W0			; Va y realiza la resta.
+    MOV #'-',W0
     CP W0,CHAR_OP
     BRA Z,RESTA
     
-    MOV #'x',W0			; Va y realiza la multiplicación
+    BTSS BANDERA,#AAXD
+    BRA SYNTAX_ERROR 
+    
+    MOV #'x',W0
     CP W0,CHAR_OP
     BRA Z,MULTI
     
-    MOV #'/',W0			; Va y realiza la división.
+    MOV #'/',W0
     CP W0,CHAR_OP
     BRA Z,DIVI
     
-    MOV #0,W0;???????????????
-    CP W0,CHAR_OP
-    BRA Z,IGUAL
     
-;***** SUBRUTINAS PARA LAS OPERACIONES *******    
 SUMA:
     ADD AA,BB,RESPUESTA
     CALL LINEA2
@@ -208,10 +236,8 @@ RESTA:
 NUMNEG:
     CALL LINEA2
     IMP_CHAR #'-'
-    ;**COMPLEMENTO A 2**
     COM RESPUESTA,RESPUESTA
     INC RESPUESTA,RESPUESTA
-    ;**********************
     RETURN
 MULTI:
     MUL.UU AA,BB,RESPUESTA
@@ -219,95 +245,80 @@ MULTI:
     CALL CONV_BCD
     BRA ANTIRREBOTE
 DIVI:
-    CP BB,#0
+    CP0 BB
     BRA Z,MATH_ERROR
     REPEAT #17
     DIV.U AA,BB
-    MOV.D W0,RESPUESTA
+    MOV W0,RESPUESTA
     MOV #1000,W0
-    MUL.UU RESPUESTAH,W0,AA
+    MUL.UU W1,W0,AA
     REPEAT #17
     DIV.U AA,BB
-    MOV.D W0,RESPDEC
+    MOV W0,RESPDEC
     CALL LINEA2
     CALL CONV_BCD
+    CP0 RESPDEC
+    BRA Z,ANTIRREBOTE
     IMP_CHAR #','
     ;SE VA A GUARDAR EN W2 DECIMAS,W3 CENTESIMAS,W4 MILESIMAS
-MILESIMAS:
-    MOV RESPDEC,W2
-    MOV #0X000F,W0
-    AND W0,W2,W2
-    CP W2,#10
-    BRA C,ARREGLAR_MILESIMAS
-CENTESIMAS: 
-    MOV RESPDEC,W3
-    MOV #0X00F0,W0
-    AND W0,W3,W3
-    LSR W3,#4,W3
-    CP W3,#10
-    BRA C,ARREGLAR_CENTESIMAS
+    CLR W4
+    CLR W3
+    MOV #0X0064,W2
 DECIMAS:
-    MOV RESPDEC,W4
-    MOV #0X0F00,W0
-    AND W0,W4,W4
-    LSR W4,#8,W4
-    CP W4,#10
-    BRA C,ARREGLAR_DECIMAS
+    CP RESPDEC,W2
+    BRA C,ARREGLAR_DECIMAS 
+    MOV #0X000A,W2
+CENTESIMAS: 
+    CP RESPDEC,W2
+    BRA C,ARREGLAR_CENTESIMAS
+    CLR W2
+MILESIMAS:
+    CP RESPDEC,#0X0001
+    BRA C,ARREGLAR_MILESIMAS
+    BRA IMPDECIMAS
 ARREGLAR_MILESIMAS:
-    ADD #6,RESPDEC
-    BRA UNIDADES
+    INC W2,W2
+    DEC RESPDEC,RESPDEC
+    BRA MILESIMAS
 ARREGLAR_CENTESIMAS: 
-    ADD #0X0060,RESPDEC
-    BRA DECENAS
+    INC W3,W3
+    SUB RESPDEC,W2,RESPDEC
+    BRA CENTESIMAS
 ARREGLAR_DECIMAS:
-    MOV #0X0600,W0
-    ADD W0,RESPDEC,RESPDEC
-    BRA CENTENAS
+    INC W4,W4
+    SUB RESPDEC,W2,RESPDEC
+    BRA DECIMAS
+IMPDECIMAS:
     IMP_NUM W4
     IMP_NUM W3
     IMP_NUM W2   
     BRA ANTIRREBOTE
 IGUAL:
+    CP0 CONTADOR 
+    BRA Z,ANTIRREBOTE
     MOV AA,RESPUESTA
     CALL LINEA2
     CALL CONV_BCD
     BRA ANTIRREBOTE
-  
 NUMERO: 
-    BTSC BANDERA,#AA_BB_OK	    ; Verifica 2 banderas: Sí 3 digitos no han
-    BRA	 ANTIRREBOTE		    ; sido ingresados, va a esperar a que 
-    BTSC BANDERA,#OP_OK		    ; ingresen por lo menos 3, caso contrario 
-    BRA NUMB			    ; (ya los ingresaron), verifica si han 
-				    ; ingresado la operación,y va a ordenar el
-				    ; segundo número, B, en NUMB, de otra forma
-				    ; aún deben estar ingresando B.
-				    
-    MUL.UU AA,#10,AA		    ; Multiplica lo que haya en ese momento en
-				    ; AA, ya sea que no hayan ingresando
-				    ; un número, o que ya vayan 2 o 3.
-				    ; AA es el acumulador del número de 3 cifras
-				    ; como máximo.
-				    
-    ADD W1,AA,AA		    ; Luego, para ordenar unidades, decenas y
-				    ; centenas, acorde al orden en que hayan
-				    ; sido ingresadas, se suma el número que
-				    ; acaben de ingresar con el acumulador.
-				    
-    INC CONTADOR,CONTADOR	    ; Se incrementa el contador de digitos.
-    CP CONTADOR,#3		    ; Si llega a 3, la bandera que verifica 
-    BRA Z, BANDERA_ON		    ; si han ingresado 3 números se pone SET
-    BRA IMPRIMIR_NUM		    ; e imprime el número. De otra forma,
-				    ; el número simplemente se imprime.
-				    
-;**** Ingreso de 3 digitos e impresión del número****
+    BTSC BANDERA,#AA_BB_OK
+    BRA	 ANTIRREBOTE
+    BTSC BANDERA,#OP_OK
+    BRA NUMB
+    BSET BANDERA,#AAXD
+    MUL.UU AA,#10,AA
+    ADD W1,AA,AA
+    INC CONTADOR,CONTADOR
+    CP CONTADOR,#3
+    BRA Z, BANDERA_ON
+    BRA IMPRIMIR_NUM
+
 BANDERA_ON:
     BSET BANDERA,#AA_BB_OK
 IMPRIMIR_NUM:
     IMP_NUM W1
     BRA ANTIRREBOTE
-;**************************************************
 
-;*******SUBRUTINA PARA GUARDAR E IMPRIMIR EL SEGUNDO NÚMERO B******
 NUMB:
     MUL.UU BB,#10,BB
     ADD W1,BB,BB
@@ -315,22 +326,18 @@ NUMB:
     CP CONTADOR,#3
     BRA Z, BANDERA_ON
     BRA IMPRIMIR_NUM
-;****************************************************************
 
-;**** SUBRUTINA PARA ESPERAR A QUE EL USUARIO DEJE DE PRESIONAR EL TECLADO****
 ANTIRREBOTE:    
-    CLR LATB		    ; Coloca en 0 las salidas hacia el teclado.
+    CLR LATB  
 WAIT_ANTIREBOTE:
     CALL delay_10ms
-    MOV PORTB,W0	    ; Lee las entradas del teclado
-    MOV #0X000F,W1	    ; el nibble menos significativo (RB4-RB0)
+    CALL delay_10ms
+    MOV PORTB,W0
+    MOV #0X000F,W1
     AND W1,W0,W0
-    CP W1,W0		    ; Si da cero, es que no han presionado nada y
-    BRA NZ, WAIT_ANTIREBOTE ; espera por si siguen oprimiendo.
-    BRA LOOP		    ; Sale y espera a que alguien lo oprima de nuevo.
-			    ; Resetea: IFS1,salidas al TECLADO.
-			    
-;********************************************************************
+    CP W1,W0
+    BRA NZ, WAIT_ANTIREBOTE
+    BRA LOOP
 MATH_ERROR:
     CALL LCD_reset
     IMP_CHAR #'M'
@@ -344,95 +351,133 @@ MATH_ERROR:
     IMP_CHAR #'O'
     IMP_CHAR #'R'
     BRA ANTIRREBOTE
+SYNTAX_ERROR:
+    CALL LCD_reset
+    IMP_CHAR #'S'
+    IMP_CHAR #'Y'
+    IMP_CHAR #'N'
+    IMP_CHAR #'T'
+    IMP_CHAR #'A'
+    IMP_CHAR #'X'
+    IMP_CHAR #' '
+    IMP_CHAR #'E'
+    IMP_CHAR #'R'
+    IMP_CHAR #'R'
+    IMP_CHAR #'O'
+    IMP_CHAR #'R'
+    BRA ANTIRREBOTE
 CONV_BCD:
-    NOP;SE VA A GUARDAR EN W2 UNIDADES,W3 DECENAS,W4 CENTENAS,W5 MILESIMAS, W6 DECENAS DE MIL,W7 CENTENAS DE MIL
-UNIDADES:
-    MOV RESPUESTA,W2
-    MOV #0X000F,W0
-    AND W0,W2,W2
-    CP W2,#10
-    BRA C,ARREGLAR_UNIDADES
-DECENAS: 
-    MOV RESPUESTA,W3
-    MOV #0X00F0,W0
-    AND W0,W3,W3
-    LSR W3,#4,W3
-    CP W3,#10
-    BRA C,ARREGLAR_DECENAS
-CENTENAS:
-    MOV RESPUESTA,W4
-    MOV #0X0F00,W0
-    AND W0,W4,W4
-    LSR W4,#8,W4
-    CP W4,#10
-    BRA C,ARREGLAR_CENTENAS
-MILES:
-    MOV RESPUESTA,W5
-    MOV #0XF000,W0
-    AND W0,W5,W5
-    LSR W5,#12,W5
-    CP W5,#10
-    BRA C,ARREGLAR_MILES
-DECENAS_DE_MIL:
-    MOV RESPUESTAH,W6
-    MOV #0X000F,W0
-    AND W0,W6,W6
-    CP W6,#10
-    BRA C,ARREGLAR_DECENAS_DE_MIL
+    MOV #14,W0
+CLR_REG_BCD:
+;se usara el algoritmo Conversi󮠤e fuerza bruta,este VA REALIZANDO UNA DIVICION EN BASE 10  
+;SE VA A GUARDAR EN W2 UNIDADES,W3 DECENAS,W4 CENTENAS,W5 MILESIMAS, W6 DECENAS DE MIL,W7 CENTENAS DE MIL
+    CLR [W0]
+    DEC2 W0,W0
+    BRA NZ, CLR_REG_BCD
+    MOV #0X86A0,W2
 CENTENAS_DE_MIL:
-    MOV RESPUESTAH,W7
-    MOV #0X00F0,W0
-    AND W0,W7,W7
-    LSR W7,#4,W7
-    CP W7,#10
-    BRA C,ARREGLAR_CENTENAS_DE_MIL
+    CP RESPUESTA,W2
+    CPB RESPUESTAH,#1
+    BRA C ,ARREGLAR_CENTENAS_DE_MIL 
+    MOV #0X2710,W2
+DECENAS_DE_MIL:
+    CP RESPUESTA,W2
+    CPB RESPUESTAH,#0
+    BRA C,ARREGLAR_DECENAS_DE_MIL
+    MOV #0X03E8,W2
+MILES:
+    CP RESPUESTA,W2
+    CPB RESPUESTAH,#0
+    BRA C,ARREGLAR_MILES
+    MOV #0X0064,W2
+CENTENAS:
+    CP RESPUESTA,W2
+    BRA C,ARREGLAR_CENTENAS
+    MOV #0X000A,W2
+DECENAS: 
+    CP RESPUESTA,W2
+    BRA C,ARREGLAR_DECENAS
+    CLR W2
+UNIDADES:
+    CP RESPUESTA,#0X0001
+    BRA C,ARREGLAR_UNIDADES
+    
+    
+    CP0 W7
+    BRA Z,IMP_DECENAS_DE_MIL
+IMP_CENTENAS_DE_MIL:  
+    BSET BANDERA,#RESP_CEROS
     IMP_NUM W7
+IMP_DECENAS_DE_MIL:
+    CP0 W6
+    BTSS BANDERA,#RESP_CEROS
+    BRA Z,IMP_MILES
+    BSET BANDERA,#RESP_CEROS
     IMP_NUM W6
+IMP_MILES:   
+    CP0 W5
+    BTSS BANDERA,#RESP_CEROS
+    BRA Z,IMP_CENTENAS
+    BSET BANDERA,#RESP_CEROS
     IMP_NUM W5
+IMP_CENTENAS:
+    CP0 W4
+    BTSS BANDERA,#RESP_CEROS
+    BRA Z,IMP_DECENAS
+    BSET BANDERA,#RESP_CEROS
     IMP_NUM W4
+IMP_DECENAS: 
+    CP0 W3
+    BTSS BANDERA,#RESP_CEROS
+    BRA Z,IMP_UNIDADES
     IMP_NUM W3
+IMP_UNIDADES:
+    BCLR BANDERA,#RESP_CEROS
     IMP_NUM W2
-
+    
     RETURN
+
+
 ARREGLAR_UNIDADES:
-    ADD #6,RESPUESTA
-    ADDC #0,RESPUESTAH
+    INC W2,W2
+    DEC RESPUESTA,RESPUESTA
     BRA UNIDADES
 ARREGLAR_DECENAS: 
-    ADD #0X0060,RESPUESTA
-    ADDC #0,RESPUESTAH
-    BRA DECENAS
+    INC W3,W3
+    SUB RESPUESTA,W2,RESPUESTA
+    BRA DECENAS 
 ARREGLAR_CENTENAS:
-    MOV #0X0600,W0
-    ADD W0,RESPUESTA,RESPUESTA
-    ADDC #0,RESPUESTAH
-    BRA CENTENAS
+    INC W4,W4
+    SUB RESPUESTA,W2,RESPUESTA
+    BRA CENTENAS 
 ARREGLAR_MILES:
-    MOV #0X6000,W0
-    ADD W0,RESPUESTA,RESPUESTA
-    ADDC #0,RESPUESTAH
-    BRA MILES
+    INC W5,W5
+    SUB RESPUESTA,W2,RESPUESTA
+    BRA MILES 
 ARREGLAR_DECENAS_DE_MIL:
-    ADD #0X0006,RESPUESTAH
-    BRA DECENAS_DE_MIL
+    INC W6,W6
+    SUB RESPUESTA,W2,RESPUESTA
+    SUBB #0,RESPUESTAH
+    BRA DECENAS_DE_MIL 
 ARREGLAR_CENTENAS_DE_MIL:
-    ADD #0X0060,RESPUESTAH
-    BRA CENTENAS_DE_MIL
-    
+    INC W7,W7
+    SUB RESPUESTA,W2,RESPUESTA
+    SUBB #1,RESPUESTAH
+    BRA CENTENAS_DE_MIL  
     
     
 LECTURA_DISP:
-    BCLR IFS1,#CNIF;Reinicia el bit
-    MOV #0,W1;Para guardar los números.
-    MOV #0,W2;Para guardar los simbólos.
+    
+    CLR W1
+    CLR W2
     MOV #0X000F,W3
-;***BARRIDO***
-    ;***PRIMERA COLUMNA***
+
+    
     MOV #0X00E0,W0
     MOV W0,LATB
     NOP
-    MOV PORTB,W0	    ; Lectura de las entradas desde el teclado
-    AND W0,W3,W0	    ; de acuerdo a lo que haya sido pulsado.
+    MOV PORTB,W0
+    AND W0,W3,W0
     BTSS W0,#0
     MOV #1,W1
     BTSS W0,#1
@@ -441,10 +486,10 @@ LECTURA_DISP:
     MOV #7,W1
     BTSS W0,#3
     MOV #'*',W2
-    ;***SEGUNDA COLUMNA***    
-    MOV #0X00D0,W0;
+    
+    MOV #0X00D0,W0
     MOV W0,LATB
-    NOP			    ; Tiempo de espera necesario entre Read y Write.
+    NOP
     MOV PORTB,W0
     AND W0,W3,W0
     BTSS W0,#0
@@ -455,10 +500,10 @@ LECTURA_DISP:
     MOV #8,W1
     BTSS W0,#3
     MOV #0,W1
-    ;***TERCERA COLUMNA***    
+    
     MOV #0X00B0,W0
     MOV W0,LATB
-    NOP			    ; Tiempo de espera necesario entre Read y Write.
+    NOP
     MOV PORTB,W0
     AND W0,W3,W0
     BTSS W0,#0
@@ -469,10 +514,10 @@ LECTURA_DISP:
     MOV #9,W1
     BTSS W0,#3
     MOV #'=',W2
-    ;***CUARTA COLUMNA***    
+    
     MOV #0X0070,W0
     MOV W0,LATB
-    NOP			    ; Tiempo de espera necesario entre Read y Write.
+    NOP
     MOV PORTB,W0
     AND W0,W3,W0
     BTSS W0,#0
@@ -485,23 +530,15 @@ LECTURA_DISP:
     MOV #'/',W2
     
     RETURN
-
-    
-
-;************** SUBRUTINA PARA REINICIAR TODOS LOS WREG **************
 REINICIO:
     MOV #28,W0
 BORRANDO:
     CLR [W0]
     DEC2 W0,W0
     BRA NZ, BORRANDO
-    CLR W0
-    CALL LCD_reset		; BORRAR DISPLAY
-    BRA ANTIRREBOTE;	    
-;*****************************************
+    CALL LCD_reset;BORRAR DISPLAY
+    BRA ANTIRREBOTE
     
-    
-;**********RUTINAS DE INICIALIZACIÓN Y ENVIO DE MENSAJES AL LCD****************
 init_LCD:   
     CALL delay_10ms
     CALL delay_10ms                  ;1
@@ -519,10 +556,11 @@ init_LCD:
     CALL delay_150us
     ;MODO: function set que yo desee
     IMP_COT #0x0028
-    IMP_COT #0x0006
+;    IMP_COT #0x0006
     IMP_COT #0x000C
     RETURN
 LCD_reset:
+    
     IMP_COT #0x0001
     CALL delay_10ms
     RETURN
@@ -624,24 +662,24 @@ mensaje2:
     
     
 ;************************** DELAYS *******************************************
+
+
 delay_500ns:
     NOP
     RETURN
-    
+
 delay_10us:
     MOV #K_10us, W0
 wait_10us:
     DEC W0,W0
     BRA NZ, wait_10us
     RETURN
-    
 delay_150us:
     MOV #K_150us, W0
 wait_150us:
     DEC W0,W0;1
     BRA NZ,wait_150us;1(2)
     RETURN;(2 o 3)
-    
 delay_10ms:
     MOV #K_10ms,W0
 wait_10ms:
@@ -651,7 +689,6 @@ wait_10ms:
     DEC W0,W0
     BRA NZ,wait_10ms
     RETURN
-    
 delay_1s:
     MOV #K_1s,W0
 wait_1s:
@@ -661,7 +698,6 @@ wait_1s:
     DEC W0,W0
     BRA NZ,wait_1s
     RETURN
-    
 delay_2s:
     MOV #K_2s,W0
 wait_2s:
@@ -672,8 +708,6 @@ wait_2s:
     BRA NZ,wait_2s
     RETURN
     
-;*******************************************************************
-.end   
-    
 
-
+;***************************End of All Code Sections****************************
+.end                               ;End of program code in this file
