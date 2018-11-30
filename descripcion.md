@@ -3,17 +3,23 @@ Automatic system for colony counter using DIP.
 Sistema automático para conteo de colonias usando técnicas de DIP.
 
 Proceso hasta ahora empleado:
+
 1. Conversión a escala de grises.
 
-1. Determinación de los centros de los pozos: por medio de correlación cruzada con un template circular de tono gris y hallando los mínimos locales de la matriz de correlación resultante que tuviesen distanciados por lo menos cierto número de pixeles.
+2. Mejora de contraste lineal.
 
-2. Seccionamiento de los pozos: comprobando todos aquellos pixeles que se encontraran dentro de un círculo con un radio promedio especificado haciendo uso de los centros anteriormente obtenidos.
+3. Determinación de los centros de los pozos.
+  3.1. Detección de bordes por método de Canny.
+  3.2. Dilatación con elemento estructurante tipo diamante para definir mejor las formas circulares del recipiente de las cajas de Petri.
+  3.3. Correlación cruzada con plantillas circulares binarias generadas.
+  3.4. Encontrar los centros de los pozos por ubicación por medio del radio del pozo.
 
-3. Segmentación: Primero se realiza una mejora de contraste y posteriormente se utiliza el método de Otsu para determinar un umbral adecuado el cual, luego se multiplica por el promedio de la imagen en escala de grises.
+4. Seccionamiento de los pozos: comprobando todos aquellos pixeles que se encontraran dentro de un círculo con un radio promedio especificado haciendo uso de los centros anteriormente obtenidos.
 
+5. Umbralización: mediante el método de Otsu se determina un umbral el cuál se escala por un factor igual al promedio de la imagen con el cual se umbraliza la imagen.
 
-*----FALTA---*
+6. Segmentación de las colonias de los bordes por distancia euclidiana en el espacio de color CIE L*a*b.
 
-4. Eliminación de las colonias que no cumplan con por lo menos 50 células: Uso de un filtro de tamaño.
+7. Eliminación de las colonias que no tengan más de 50 células haciendo uso de propiedades geométricas de las regiones.
 
-5. Etiquetado y conteo: Se etiquetan las regiones que posean cierta conectividad y luego se realiza el conteo.
+8 Etiquetado y conteo: Se etiquetan las regiones que posean cierta conectividad y luego se realiza el conteo.
