@@ -1,4 +1,4 @@
-# colonies
+# Breve descripción del algoritmo utilizado
 Automatic system for colony counter using DIP.
 Sistema automático para conteo de colonias usando técnicas de DIP.
 
