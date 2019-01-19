@@ -2,7 +2,7 @@
 """
 Created on Wed May 23 10:54:20 2018
 
-@author: Nicolas
+@author: Nicolas, Liz, Mafe
 """
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
