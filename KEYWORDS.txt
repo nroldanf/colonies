@@ -1,0 +1,31 @@
+Busqueda: Scopus, EMBASE, IEEEXplore
+
+Colony forming unit or colonies or colony 
+counting or CFU counting
+image processing or image analysis
+automatic
+automation
+
+
+
+cell survival
+cancer
+clonogenic assay
+
+
+
+Posibles search queries:
+
+(colonies OR colony) AND ("image processing" OR "image analysis") AND (counting) AND (automatic OR automation) / Scopus 62 Resultados
+("colonies" OR "colony") AND ("image processing" OR "image analysis") AND ("counting") AND ("automatic" OR "automation") / IEEEXplore 6 resultados
+
+
+(colonies OR colony OR "CFU counting") AND ("image processing" OR "image analysis") AND (counting) AND (automatic OR automation) AND (cancer OR "clonogenic assay")/ Scopus 9 resultados
+("colonies" OR "colony" OR "CFU counting") AND ("image processing" OR "image analysis") AND ("counting") AND ("automatic" OR "automation") AND (cancer OR "clonogenic assay")/ IEEEXplore 0 Resultados
+
+
+(colonies OR colony OR "CFU counting") AND ("image processing" OR "image analysis") AND (counting) AND (cancer OR "clonogenic assay")/ Scopus 20 resultados
+("colonies" OR "colony" OR "CFU counting") AND ("image processing" OR "image analysis") AND ("counting") AND (cancer OR "clonogenic assay")/ IEEEXplore 1 resultado
+
+
+("colonies" OR "colony" OR "CFU counting") AND ("image processing" OR "image analysis" OR "digital image processing") AND ("counting")/ IEEExplore 19 resultados
