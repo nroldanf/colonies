@@ -2,7 +2,7 @@
 """
 Created on Fri May 25 19:34:53 2018
 
-@author: Nicolas
+@author: Nicolas, Liz, Mafe
 """
 
 # In[]
