@@ -11,13 +11,15 @@ from skimage.morphology import watershed
 from skimage.color import rgb2gray
 from skimage.feature import peak_local_max
 from scipy import ndimage as ndi
-from skimage.morphology import white_tophat, black_tophat, opening, closing
+from skimage.morphology import white_tophat, black_tophat, opening, closing, dilation, erosion
 from skimage.morphology import disk,ball,diamond
 from skimage import exposure
+from skimage.filters import median
 from skimage.filters.thresholding import threshold_otsu, try_all_threshold
 from scipy.misc import imsave
+from skimage.exposure import rescale_intensity
 from funciones import*
-from skimage.feature import peak_local_max
+from skimage.feature import match_template,peak_local_max,canny
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,6 +47,7 @@ def plot_comparison(original, filtered, filter_name):
     ax2.imshow(filtered, cmap=plt.cm.gray)
     ax2.set_title(filter_name)
     ax2.axis('off')
+    return fig
 
 def hist_comparison(original,modified,name):
     fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(8, 4), sharex=True,
@@ -126,3 +129,43 @@ plt.axis('off')
 plt.imshow(labels,  cmap=plt.cm.nipy_spectral, interpolation='nearest')
 plt.title('Watershed')
 plt.show()
+
+
+# In[]
+plt.close('all')
+gen = 'Imagenes/'
+folder_ids,image_ids = loadImages(gen='Imagenes/')
+r_small = 50#Radio del círculo pequeño
+r_pozo = 140#Radio del pozo
+s1 = diamond(1)# Elemento estructurante para la apertura
+s2 = diamond(6)# Elemento estructurante para el black Top Hat
+template = circle(r_small)#Template para la correlación
+s = diamond(4)#elemento estructurante para el cierre
+
+for folder in range(0,len(folder_ids)):# Para cada carpeta
+    for image in range(0,len(image_ids[folder])):# Pára cada imagen
+        PATH = gen + folder_ids[folder] + '/' + image_ids[folder][image]# PATH de la imagen
+        I = imread(PATH)
+        Igray = rgb2gray(I)
+        BW = canny(Igray,sigma=0.5)
+        BW = closing(BW,s)
+        result = match_template(BW,template,pad_input = True)
+        coordinates = peak_local_max(result, min_distance=160)#centro del pequeño 
+        centros = corr2d(coordinates,template,r_pozo)
+        m = np.shape(Igray)# Dimensión de la imagen
+        m_BW = np.zeros([m[0],m[1]])#Imagen negra de la misma dimensión
+        for k in range(0,len(centros)):# Para cada pozo 
+            Ieq = exposure.adjust_gamma(Igray,0.5)# Mejora de contraste
+            Iop = opening(Ieq,s1)
+            If = black_tophat(Iop,s2)
+            If2 = exposure.adjust_gamma(If,0.8)# Mejora de contraste
+            I_seg = pozos(If2,centros[k],r_pozo)
+#            plot_comparison(I,I_seg,'Binarización Otsu')
+            BW = otsuNew(I_seg,If2,centros[k],r_pozo)
+#            plot_comparison(If2,BW,'Binarización Otsu')
+            m_BW = m_BW + BW
+        fig = plot_comparison(I,m_BW,image_ids[folder][image])
+        plt.close('all')
+        fig.savefig('Resultados_alternos/'+'Preprocesamiento'+str(folder)+str(image)+'.jpg',dpi=600)
+#        fig.savefig('Resultados_alternos/'+'Preprocesamiento'+str(folder)+str(image)+'.jpg')
+        
