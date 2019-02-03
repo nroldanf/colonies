@@ -67,6 +67,13 @@ def displayIMG(I,name):
     plt.title()
     plt.show()
     
+def otsuNew(I_cro,Igray,centro,r):
+    I2 = Igray[(centro[1]-r):(centro[1]+r),(centro[0]-r):(centro[0]+r)]
+#    hist_comparison(Igray,I2,'Segmentado')
+    thresh = threshold_otsu(I2)
+#    print(thresh)1
+    BW = I_cro > thresh
+    return BW
 # In[]
 # Proceso:
 '''
@@ -159,7 +166,9 @@ for folder in range(0,len(folder_ids)):# Para cada carpeta
             Iop = opening(Ieq,s1)
             If = black_tophat(Iop,s2)
             If2 = exposure.adjust_gamma(If,0.8)# Mejora de contraste
-            I_seg = pozos(If2,centros[k],r_pozo)
+            # Se obtiene el umbral con la imagen luego del BTH y la mejora, tomando
+            # el cuadrado de un pozo.
+            I_seg = pozos(If2,centros[k],r_pozo)# Se recorta un pozo
 #            plot_comparison(I,I_seg,'Binarización Otsu')
             BW = otsuNew(I_seg,If2,centros[k],r_pozo)
 #            plot_comparison(If2,BW,'Binarización Otsu')
