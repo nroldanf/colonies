@@ -8,15 +8,19 @@ import numpy as np
 import math
 from skimage.color import rgb2gray
 from skimage.color import rgb2lab
-from skimage.exposure import rescale_intensity
+from skimage.exposure import rescale_intensity, adjust_gamma
 from skimage.feature import match_template,peak_local_max,canny
 from skimage.morphology import diamond
-from skimage.morphology import closing
+from skimage.morphology import opening, black_tophat, closing
 from skimage.filters.thresholding import threshold_otsu
 from skimage.measure import regionprops
 from skimage.measure import label
 from skimage.color import label2rgb
 from sklearn.cluster import KMeans
+from scipy.ndimage.morphology import distance_transform_edt
+from skimage.morphology import watershed
+from scipy import ndimage as ndi
+
 
 
 
@@ -28,13 +32,31 @@ class Colonias:
         self.r_pozo = 140
         self.min_distance = 160
         self.s = diamond(4)
+        self.s1 = diamond(1)# Elemento estructurante para la apertura
+        self.s2 = diamond(6)# Elemento estructurante para el black Top Hat
         self.template = self.__circle()
+        
     
     # Helpers    
     def mejoraConstraste(self):
         I_gray = rgb2gray(self.image)
         I_gray = rescale_intensity(I_gray,in_range=(0.2,0.8),out_range=(0,1))
         return I_gray
+    
+    def preprocess(self):
+        Igray = rgb2gray(self.image)
+        Ieq = adjust_gamma(Igray,0.4)# Mejora de contraste
+        Iop = opening(Ieq,self.s1)
+        
+        # Retorna lo que sea más pequeño que el elemento estructurante
+        # Podría ser un parámetro definido por el usuario, basado en 
+        # la colonia más grande
+        If = black_tophat(Iop,self.s2)
+        If2 = adjust_gamma(If,0.7)# Mejora de contraste
+        # Binarización
+        thresh = threshold_otsu(If2)
+        BW = If > thresh
+        return BW
         
     def __canny(self):
         BW = canny(self.mejoraConstraste(),sigma=0.5)
@@ -68,35 +90,49 @@ class Colonias:
         
         return centros
     
-    def pozo(self,centro,m_I):
+    def pozo(self,c,m_I):
 #        m_I = self.mejoraConstraste()
         I_new = np.zeros([self.shape[0],self.shape[1]])
-        for i in range(0,self.shape[0]):
-            for j in range(self.shape[1]):
-                d = math.sqrt(abs( (centro[1] - i)**2 + (centro[0] - j)**2 ) )
-                if d <= self.r_pozo:
+        n = [c[1]-self.r_pozo,c[1]+self.r_pozo,c[0]-self.r_pozo,c[0]+self.r_pozo]
+        for i in range(n[0],n[1]):
+            for j in range(n[2],n[3]):
+                d = np.sqrt(abs((c[1]-i)**2+(c[0]-j)**2)) 
+                if d < self.r_pozo:
                     I_new[i,j] = m_I[i,j]
         return I_new
     
+    def pozos2(self,I,c,P):
+        I_new = np.zeros([self.shape[0],self.shape[1]])
+        n = len(P)
+        for i in range(0,n):
+            j = P[i]
+            d  = np.sqrt(abs(np.square(c[0]-j[1])+np.square(c[1]-j[0])))
+            if (d<= self.r_pozo and d>= self.r_pozo-20):
+                I_new[j[0],j[1]] = I[j[0],j[1]]
+        return I_new
+    
+        
     
     def otsu(self,I_pozo,I_gray,centro):
         I = I_gray[(centro[1]-self.r_pozo):(centro[1]+self.r_pozo),(centro[0]-self.r_pozo):(centro[0]+self.r_pozo)]
-        prom = np.mean(I)
-        thresh = threshold_otsu(I)*prom
+        thresh = threshold_otsu(I)
         BW = I_pozo > thresh
-        BW = 1-BW
         return BW
     
-    def pozo_anillo(self,m_I,centro):
+    
+    def pozo_anillo(self,m_I,c):
+        
         I_new = np.ones([self.shape[0],self.shape[1]])
         prom = []
-        for i in range(0,self.shape[0]):
-            for j in range(0,self.shape[1]):
-                d = math.sqrt( abs( (centro[1] - i)**2 + (centro[0] - j)**2 ) ) 
+        n = [c[1]-self.r_pozo,c[1]+self.r_pozo,c[0]-self.r_pozo,c[0]+self.r_pozo]
+        for i in range(n[0],n[1]):
+            for j in range(n[2],n[3]):
+                d = math.sqrt( abs( (c[1] - i)**2 + (c[0] - j)**2 ) ) 
                 if d <= self.r_pozo and d >= self.r_pozo-20:
                     I_new[i,j] = m_I[i,j]
                     prom.append([i,j])
         return I_new,prom
+    
 
     def reg_seg(self,Iseg):
         labeled = label(Iseg,neighbors=8, background=0)
@@ -120,51 +156,45 @@ class Colonias:
             i += 1
         return Iseg
         
-    def color(self,I_gray,centro):
-        I_bordes,prom = self.pozo_anillo(I_gray,centro)
-        I2 = np.copy(self.image)
-        #por plano se toman los anillos
-        I2[:,:,0],prom = self.pozo_anillo(self.image[:,:,0],centro)
-        I2[:,:,1],prom = self.pozo_anillo(self.image[:,:,1],centro)
-        I2[:,:,2],prom = self.pozo_anillo(self.image[:,:,2],centro)
-        promcito = np.asarray(prom)#vuelvo arreglo la lista de listas prom
-        I_color = rgb2lab(I2,illuminant='D65',observer='2')
-        m = np.shape(I_color[:,:,0])
-        promedio = [
-            np.mean( I_color[promcito[:,0],promcito[:,1],1] ), 
-            np.mean( I_color[promcito[:,0],promcito[:,1],2] ) 
-        ]
+    def color(self,I_gray,c):
         IRGB = rgb2gray(self.image)
-    #IRGB = pozos2(IRGB,centros,r_pozo) 
-    #for umbral in umbral:
-        umbral = 5
-        for i in range(0,m[0]):
-            for j in range(0,m[1]):
-                pix = I_color[i,j,1::]
-                dist = np.linalg.norm(promedio - pix)
-                if dist < umbral:
-                    IRGB[i,j] = 1
-                
-        IRGB = 1 - IRGB
-        IRGB = IRGB > 0.7    
-        I_fin = (I_bordes + IRGB) > 0.9
+        I_gray,prom = self.pozo_anillo(I_gray,c)
+        I = np.copy(self.image)
+        for n in range(0,3):
+            I[:,:,n] = self.pozos2(self.image[:,:,n],c,prom)
+        
+        prome = np.asarray(prom)#vuelvo arreglo la lista de listas prom
+        I_color = rgb2lab(I,illuminant='D65',observer='2')
+        promedio = [np.mean(I_color[prome[:,0],prome[:,1],1] ),
+                    np.mean(I_color[prome[:,0],prome[:,1],2])]
+        n = [c[1]-self.r_pozo,c[1]+self.r_pozo,c[0]-self.r_pozo,c[0]+self.r_pozo]
+        n = len(prom)
+        for i in range(0,n):
+            j = prom[i]
+            dist = np.linalg.norm(promedio-I_color[j[0],[1],1::])
+            if dist < 5:
+                IRGB[j[0],j[1]] = 1
+        IRGB = (1 - IRGB)> 0.7
+        I_fin = (I_gray + IRGB) > 0.9
         return I_fin
     
 
-    def clustering(self):
-        # Number of clusters to be used
-        n_colors = 4
-        #Reshaping to a vector
-        size = self.image.shape
-        #Clustering with cromatic planes of L*a*b space
-        Ilab = rgb2lab(self.image,illuminant='D65',observer='2')
-        # Feature matrix of cromatic planes
-        #croma = # Cromatic planes a and b
-        I_plane = np.reshape(Ilab[:,:,1:3],(size[0]*size[1],2))
-        # Cluster the pixel intensities
-        clt = KMeans(init = "k-means++",n_clusters = n_colors,n_init = 10)
-        clt.fit(I_plane)
-        y = clt.fit_predict(I_plane)#iimagendices de cada muestra
+    
+
+#    def clustering(self):
+#        # Number of clusters to be used
+#        n_colors = 4
+#        #Reshaping to a vector
+#        size = self.image.shape
+#        #Clustering with cromatic planes of L*a*b space
+#        Ilab = rgb2lab(self.image,illuminant='D65',observer='2')
+#        # Feature matrix of cromatic planes
+#        #croma = # Cromatic planes a and b
+#        I_plane = np.reshape(Ilab[:,:,1:3],(size[0]*size[1],2))
+#        # Cluster the pixel intensities
+#        clt = KMeans(init = "k-means++",n_clusters = n_colors,n_init = 10)
+#        clt.fit(I_plane)
+#        y = clt.fit_predict(I_plane)#iimagendices de cada muestra
         
         
 
@@ -181,34 +211,71 @@ class Colonias:
     
     
     def processing(self):
-        I_gray = self.mejoraConstraste()
-        centros = self.corr2d()
+        I_gray = self.preprocess()
+        centros = self.corr2d()        
         m_BW = np.zeros([self.shape[0],self.shape[1]])#Imagen negra de la misma dimensión
-        
+        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
+        'Pozo 5':[],'Pozo 6':[]}# Diccionario donde se guarda el conteo
         for k in range(0,len(centros)):
-            # Seccionamiento de 1 pozo
-            I_seg = self.pozo(centros[k],I_gray)
-            # Otsu por pozo
-            I_otsu = self.otsu(I_seg,I_gray,centros[k])
-            # Mascara color para los bordes
-            I_color = self.color(I_gray,centros[k])
-            # Aplicación de las propiedades de region
-            I_props = self.reg_seg(I_otsu*I_color)
-            # Etiquetado y conteo de las colonias
-            # 8-conectividad, fondo negro
-            labeled,num = label(
-                I_props, neighbors=8, background=0,
-                return_num=True
-            )
-#            # Guarda el conteo por pozo en un diccionario
-#            dic[ list(dic.keys())[k] ].append(num)
-            # Suma el resultado del pozo a una imagen negra (ceros)
-            m_BW = m_BW + I_props
+            try:
+                # Seccionamiento de 1 pozo
+                I_seg = self.pozo(centros[k],I_gray)
+                # Otsu por pozo
+                I_otsu = self.otsu(I_seg,I_gray,centros[k])
+                # Mascara color para los bordes
+                I_color = self.color(I_gray,centros[k])
+                # Aplicación de las propiedades de region
+                I_props = self.reg_seg(I_otsu*I_color)
+                # Watershed
+                I_wa = self.watershedDT(I_props)
+                I_wa[I_wa>0]=1
+                # Etiquetado y conteo de las colonias
+                # 8-conectividad, fondo negro
+                labeled,num = label(
+                    I_wa, neighbors=8, background=0,
+                    return_num=True
+                )
+                
+    #            # Guarda el conteo por pozo en un diccionario
+                conteo[ list(conteo.keys())[k] ].append(num)
+                # Suma el resultado del pozo a una imagen negra (ceros)
+                m_BW = m_BW + I_wa
+            except:
+                print('Pozo no viable')
 
         labeled = label(m_BW, neighbors=8, background=0)
         labeled_RGB = label2rgb(labeled, image=self.image)#image = imagen original
         
-        return labeled_RGB
+        return labeled_RGB,conteo
     
+#    I_seg = pozo(If2,centros[k],r_pozo)# Se recorta un pozo
+#    #            plot_comparison(I,I_seg,'Binarización Otsu')
+#            BW = otsuNew(I_seg,If2,centros[k],r_pozo)
+#            I_color = color(I,centros[k],r_pozo)
+#            I_bor = (BW * I_color)
+#            I_props = reg_seg(I_bor)
+#            I_wa = watershedDT(I_bor)
+#            I_wa[I_wa>0]=1
+#            labeled,num = label(I_wa,neighbors=8, background=0,return_num=True,connectivity=10)#etiquetado y conteo
+#    #            print('Hay ' + str(num) + ' colonias en el pozo ' + str(k) + '.')
+#            # LLena el diccionario con cada conteo, por cada uno de los pozos k
+#            dic[ list(dic.keys())[k] ].append(num)
+#    #            plot_comparison(If2,BW,'Binarización Otsu')
+#            m_BW = m_BW + I_wa
+#            #'''''''''''''''''''''''
+#            I_segfin = I_segfin + I_seg
+#            I_otsufin = I_otsufin + BW
+#            I_propsfin = I_propsfin + I_props
+#            I_colorfin = I_colorfin + I_color
     
+    def watershedDT(self,I):
+        dist = distance_transform_edt(I)
+        # Máximos locales hallados en una vecindad de 3x3
+        local_maxi = peak_local_max(dist, indices=False, footprint=np.ones((3, 3)),
+                                    labels=I)
+        # footprint es la vecindad para hallar máximos regionales
+        markers = ndi.label(local_maxi)[0]# Lo convierte a una matriz de enteros
+        # Se invierte para que así los máximos ahora sean mínimos (catch basins)
+        labels = watershed(-dist, markers, mask=I)# Algoritmo basado en marcadores
+        return labels
     #conncomponents
