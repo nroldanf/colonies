@@ -211,7 +211,14 @@ class Ui_Dialog(object):
         
     
     def processAll(self):
-        # Reinicie la lista con las imágenes
+        
+        # Crea el directorio donde se guardará TODOOoOoOO
+        ansPath = 'Resultados_GUI'
+        try:
+            os.makedirs(ansPath)
+        except:
+            print('El directorio ya existe')
+        
         
         # Cree el directorio donde se guardarán los resultados
         now = datetime.datetime.now()
