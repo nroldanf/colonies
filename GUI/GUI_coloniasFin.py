@@ -14,6 +14,7 @@ from clase import *
 from scipy.misc import imsave
 import datetime
 import time
+import pandas as pd
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -23,8 +24,11 @@ class Ui_Dialog(object):
         self.images_PATH = []
         self.images = []
         self.cont = [0]
+        self.conteo = []
+
         
         self.timing = []
+        
         
         Dialog.setObjectName("Dialog")
         Dialog.resize(986, 675)
@@ -148,7 +152,7 @@ class Ui_Dialog(object):
         self.btnRemove.setText(_translate("Dialog", "<<"))
         self.btnAdd.setText(_translate("Dialog", ">>"))
         self.btnViewRes.setText(_translate("Dialog", "Ver Resultados"))
-        self.lblFolder_2.setText(_translate("Dialog", "Imágenes disponibles"))
+        self.lblFolder_2.setText(_translate("Dialog", "Imágenes seleccionadas: " + str( len(self.images)) ))
 
     #Métodos asociados
     def openRes(self):
@@ -182,29 +186,36 @@ class Ui_Dialog(object):
         self.lblImage.setScaledContents(True)
         
     def right(self):
-        if self.cont[0] <= len(self.images_PATH):
+        if self.cont[0] < len(self.images_PATH)-1:
             self.cont[0] += 1
         self.viewImage(self.cont[0])
         
     def left(self):
-        if self.cont[0] >= 0:
+        if self.cont[0] > 0:
             self.cont[0] -= 1
         self.viewImage(self.cont[0])
         
-    def processOne(self,PATH,name):
+    def processOne(self,PATH,name,index):
         start = time.time()# Para contar cuanto se demora
         I = imread(PATH)
         I_cla = Colonias(I)
         Res,conteo = I_cla.processing()
         self.timing.append(time.time()-start)
         imsave(name,Res)
-        print(conteo)
         print(self.timing)
+        self.conteo.append(conteo)# Concatena a una matriz
+        
+        # Conversion to dataframe
+#        df = pd.DataFrame(conteo,index=self.images)
+#        self.conteo.append(df)# Adjunta el conteo por cada carpeta
+        
     
     def processAll(self):
+        # Reinicie la lista con las imágenes
+        
         # Cree el directorio donde se guardarán los resultados
         now = datetime.datetime.now()
-        ansPath = 'Resultados_GUI/' + now.strftime("%Y-%m-%d %H_%M")
+        ansPath = 'Resultados_GUI/' + now.strftime("%Y-%m-%d")
         try:
             os.makedirs(ansPath)
         except:
@@ -213,8 +224,17 @@ class Ui_Dialog(object):
         print('Comencé')
         for i in range(0,len(self.images_PATH)):
             print(self.images[i])
-            self.processOne(self.images_PATH[i],ansPath +'/'+ self.images[i])
+            self.processOne(self.images_PATH[i],ansPath +'/'+ self.images[i],i)
         
+        # Conversion to dataframe
+        df = pd.DataFrame(self.conteo,index=self.images)
+        
+        with pd.ExcelWriter('Resultados_GUI/'+ now.strftime("%Y-%m-%d") + '/' + '05.04.2016' + '.xlsx') as writer:
+            df.to_excel(writer, sheet_name='Hoja1')
+
+#            for i in range(0,len(self.conteo)):
+#                self.conteo[i].to_excel(writer,sheet_name='05.04.2016')
+    
         
         
 #        import time
@@ -231,8 +251,6 @@ class Ui_Dialog(object):
     -Si una imagen es seleccionada (solo se puede seleccionar una)
     que se visualice 
     ó
-    -Que se visulicen de manera simultanea y mediante botones < >
-    se cambie entre las que se han agregado
     - Destinar un espacio para mostrar el conteo(tipo tabla o en la misma interfaz o ambas):
         Tener la posibilidad de visualizarlo en la misma interfaz
         o exportarlo como archivo de excel.
@@ -254,7 +272,10 @@ class Ui_Dialog(object):
     Resultados
     - Contabilizar el tiempo que tarda por cada imagen para sacar promedio
     (tener en cuenta que algunas de las imágenes tienen diferentes tamaños)
-    - 
+    - Especificidad y sensibilidad (falsos positivos,...)
+
+    Problemas
+    - La visualización mediante botones < > aún no funcilona bien
 
     '''
     #***********************************
