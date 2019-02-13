@@ -214,8 +214,9 @@ class Colonias:
         I_gray = self.preprocess()
         centros = self.corr2d()        
         m_BW = np.zeros([self.shape[0],self.shape[1]])#Imagen negra de la misma dimensión
-        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
-        'Pozo 5':[],'Pozo 6':[]}# Diccionario donde se guarda el conteo
+#        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
+#        'Pozo 5':[],'Pozo 6':[]}# Diccionario donde se guarda el conteo
+        conteo = []
         for k in range(0,len(centros)):
             try:
                 # Seccionamiento de 1 pozo
@@ -237,7 +238,11 @@ class Colonias:
                 )
                 
     #            # Guarda el conteo por pozo en un diccionario
-                conteo[ list(conteo.keys())[k] ].append(num)
+#                conteo[ list(conteo.keys())[k] ].append(num)
+                
+                # Guarda el conteo en un arreglo
+                conteo.append(num)
+                
                 # Suma el resultado del pozo a una imagen negra (ceros)
                 m_BW = m_BW + I_wa
             except:
