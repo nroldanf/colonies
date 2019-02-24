@@ -149,6 +149,14 @@ class Ui_Dialog(object):
 #        self.listImags.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.listImags.setObjectName("listImags")
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        # Mensaje de advertencia
+        self.msg = QtWidgets.QMessageBox()
+        self.msg.setWindowTitle('Previsualizar')
+        self.msg.setWindowIcon(QtGui.QIcon('Logos/if_Microscope_379436.png'))
+        self.msg.setText('Debe seleccionar por lo menos 1 imagen.')
+        self.msg.setIcon(QtWidgets.QMessageBox.Information)
+        self.msg.setVisible(False)
+        
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -210,10 +218,10 @@ class Ui_Dialog(object):
     def viewImage(self,num=0):
         try:
             self.pixmap = QtGui.QPixmap(self.images_PATH[num])
-            self.lblImage.setPixmap(self.pixmap)
-#            self.lblImage.setScaledContents(True)
+            self.lblImage.setPixmap(self.pixmap)            
         except:
-            print("Debe seleccionar por lo menos una imagen.")
+            self.msg.setVisible(True)
+
         
     # Incrementa el contador para visualizar la siguiente imagen en la lista
     def right(self):
@@ -274,7 +282,7 @@ class Ui_Dialog(object):
         df = pd.DataFrame(self.conteo,index=self.images)
         with pd.ExcelWriter('Resultados_GUI/'+ now.strftime("%Y-%m-%d") + '.xlsx') as writer:
             df.to_excel(writer, sheet_name='05.04.2016')
-
+            
 
     # Método para incrementar barra de tareas
     def loadBar(self):
@@ -312,9 +320,12 @@ class Ui_Dialog(object):
         
     # Hilo para el procesamiento de las imágenes
     def threadOne(self):
-        self.run_thread = Thread(target=self.processAll)
-        self.run_thread.start() # start the thread
-        
+        if len(self.images) > 0:
+            self.run_thread = Thread(target=self.processAll)
+            self.run_thread.start() # start the thread
+        else:
+            self.msg.setVisible(True)
+            
     # Hilo para la barra de carga
     def threadTwo(self):
         self.run_thread = Thread(target=self.loadBar)
@@ -351,15 +362,6 @@ class Ui_Dialog(object):
     '''
     #***********************************
 
-    
-
-#class myThread(threading.Thread,Ui_Dialog):#HERENCIA
-#    def __init__(self,proc):
-#        threading.Thread.__init__(self)
-#        self.w = proc
-#        self.count = 0
-#    def run(self):
-#        proc.processAll(self)
             
 if __name__ == "__main__":
     import sys
