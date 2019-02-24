@@ -15,21 +15,21 @@ from scipy.misc import imsave
 import datetime
 import time
 import pandas as pd
+import numpy as np
+from threading import Thread
+
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
-        # PATH de las imágenes
-        self.PATH = ""
-        self.folder_ids = []
+        # *** Inicialización de variables de clase ***
+#        self.PATH = ""
+#        self.folder_ids = []
         self.images_PATH = []
         self.images = []
-        self.cont = [0]
+        self.cont = [0,0]
         self.conteo = []
-
-        
         self.timing = []
-        
-        
+        # *** Interfaz ***
         Dialog.setObjectName("Dialog")
         Dialog.resize(986, 675)
         Dialog.setStyleSheet("background-color: rgb(255, 255, 255);")
@@ -53,16 +53,32 @@ class Ui_Dialog(object):
         self.groupBox.setGeometry(QtCore.QRect(20, 90, 661, 411))
         self.groupBox.setTitle("")
         self.groupBox.setObjectName("groupBox")
-        self.horizontalLayoutWidget = QtWidgets.QWidget(self.groupBox)
-        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(10, 10, 641, 391))
-        self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
-        self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.lblImage = QtWidgets.QLabel(self.horizontalLayoutWidget)
+        self.lblImage = QtWidgets.QLabel(self.groupBox)
+        self.lblImage.setGeometry(QtCore.QRect(10, 10, 639, 389))
         self.lblImage.setText("")
         self.lblImage.setObjectName("lblImage")
-        self.horizontalLayout.addWidget(self.lblImage)
+        # Imagen inicial en la interfaz
+        self.pixmap = QtGui.QPixmap("Logos/rembrandt.jpg")
+        self.lblImage.setPixmap(self.pixmap)
+        self.lblImage.setScaledContents(True)
+        self.progressBar = QtWidgets.QProgressBar(self.groupBox)
+        self.progressBar.setGeometry(QtCore.QRect(280, 200, 118, 23))
+        self.progressBar.setProperty("value", 24)
+        self.progressBar.setObjectName("progressBar")
+        self.progressBar.setVisible(False)
+        self.progressBar.setValue(self.cont[1])
+        
+        self.lblProcess = QtWidgets.QLabel(self.groupBox)
+        self.lblProcess.setGeometry(QtCore.QRect(280, 180, 81, 16))
+        self.lblProcess.setObjectName("lblProcess")
+        self.lblProcess.setVisible(False)
+        
+        self.btnViewRes = QtWidgets.QPushButton(self.groupBox)
+        self.btnViewRes.setGeometry(QtCore.QRect(280, 230, 91, 23))
+        self.btnViewRes.setObjectName("btnViewRes")
+        self.btnViewRes.clicked.connect(self.openRes)
+        self.btnViewRes.setVisible(False)
+        
         self.groupBox_2 = QtWidgets.QGroupBox(Dialog)
         self.groupBox_2.setGeometry(QtCore.QRect(690, 510, 271, 151))
         self.groupBox_2.setTitle("")
@@ -92,7 +108,7 @@ class Ui_Dialog(object):
         self.btnProcess.setObjectName("btnProcess")
         self.btnProcess.setIcon(QtGui.QIcon('Logos/micro'))
         self.btnProcess.setIconSize(QtCore.QSize(24,24))
-        self.btnProcess.clicked.connect(self.processAll)
+        self.btnProcess.clicked.connect(self.threadOne)
         
         self.gridLayout.addWidget(self.btnProcess, 1, 0, 1, 1)
         self.horizontalLayoutWidget_2 = QtWidgets.QWidget(self.groupBox_2)
@@ -109,11 +125,6 @@ class Ui_Dialog(object):
         self.btnAdd.setObjectName("btnAdd")
         self.btnAdd.clicked.connect(self.right)
         self.horizontalLayout_2.addWidget(self.btnAdd)
-        
-        self.btnViewRes = QtWidgets.QPushButton(Dialog)
-        self.btnViewRes.setGeometry(QtCore.QRect(780, 470, 91, 23))
-        self.btnViewRes.setObjectName("btnViewRes")
-        self.btnViewRes.clicked.connect(self.openRes)
         
         self.groupBox_4 = QtWidgets.QGroupBox(Dialog)
         self.groupBox_4.setGeometry(QtCore.QRect(20, 510, 661, 151))
@@ -145,8 +156,9 @@ class Ui_Dialog(object):
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "ColonyCounter2001XD"))
+        self.lblProcess.setText(_translate("Dialog", "Procesando..."))
         self.btnRoot.setText(_translate("Dialog", "Seleccionar imágenes"))
-        self.btnLoad.setText(_translate("Dialog", "Cargar imágenes"))
+        self.btnLoad.setText(_translate("Dialog", "Previsualizar"))
         self.btnProcess.setText(_translate("Dialog", "Procesar imágenes"))
         self.btnLimpiar.setText(_translate("Dialog", "Limpiar"))
         self.btnRemove.setText(_translate("Dialog", "<<"))
@@ -155,13 +167,18 @@ class Ui_Dialog(object):
         self.lblFolder_2.setText(_translate("Dialog", "Imágenes seleccionadas: " + str( len(self.images)) ))
 
     #Métodos asociados
+    
+    # Abrir nueva ventana para visualizar resultados
     def openRes(self):
         self.window = QtWidgets.QDialog()
         self.ui = Ui_Dialog2()
         self.ui.setupUi2(self.window)
         self.window.show()
 
+    # Abrir ventana de dialogo para seleccionar y mostrar los nombres en 
+    # el list widget
     def getImages(self):
+        self.limpiar()
         temp = QtWidgets.QFileDialog.getOpenFileNames()
         cont = 0
         for name in temp[0]:
@@ -173,82 +190,140 @@ class Ui_Dialog(object):
             cont+=1
         self.listImags.clear()
         self.listImags.addItems(self.images)
+        self.lblFolder_2.setText("Imágenes seleccionadas: " + str( len(self.images)) )
             
+    # Limpia la listwidget y la lista de nombres de imágenes y de los PATHs
     def limpiar(self):
         self.images_PATH.clear()
         self.images.clear()
         self.listImags.clear()
+        self.timing.clear()
         
-    def viewImage(self,num=0):
-#        I = imread(images_PATH)
-        self.pixmap = QtGui.QPixmap(self.images_PATH[num])
+        # 0 imágenes seleccionadas
+        self.lblFolder_2.setText("Imágenes seleccionadas: " + str( len(self.images)) )
+        # Limpie el label donde se muestra la imagen
+        self.pixmap = QtGui.QPixmap("Logos/rembrandt.jpg")
         self.lblImage.setPixmap(self.pixmap)
-        self.lblImage.setScaledContents(True)
+        self.btnViewRes.setVisible(False)
         
+    #Visualiza la imagen actual en el label
+    def viewImage(self,num=0):
+        try:
+            self.pixmap = QtGui.QPixmap(self.images_PATH[num])
+            self.lblImage.setPixmap(self.pixmap)
+#            self.lblImage.setScaledContents(True)
+        except:
+            print("Debe seleccionar por lo menos una imagen.")
+        
+    # Incrementa el contador para visualizar la siguiente imagen en la lista
     def right(self):
+        # si el contador es menor a la longitud de la lista de imágenes
         if self.cont[0] < len(self.images_PATH)-1:
             self.cont[0] += 1
         self.viewImage(self.cont[0])
-        
+    
+    # Decrementa el contador para visualizar la siguiente imagen
     def left(self):
         if self.cont[0] > 0:
             self.cont[0] -= 1
         self.viewImage(self.cont[0])
         
+    # Procesa una imagen
     def processOne(self,PATH,name,index):
+        nameMono = name +'/'+ self.images[index]# Imagen BW
+        nameColor = name + '/' + 'color_' + self.images[index]# Imagen pseudo
         start = time.time()# Para contar cuanto se demora
         I = imread(PATH)
-        I_cla = Colonias(I)
-        Res,conteo = I_cla.processing()
+        I_cla = Colonias(I)# Cree objeto
+        Res,conteo,color = I_cla.processing()# Procese la imagen
         self.timing.append(time.time()-start)
-        imsave(name,Res)
+        imsave(nameMono.replace('.jpg','.tiff'),Res)# Guarde la imagen BW
+        imsave(nameColor.replace('.jpg','.tiff'),color)# Guarde la imagen pseudocolor
         print(self.timing)
         self.conteo.append(conteo)# Concatena a una matriz
         
-        # Conversion to dataframe
-#        df = pd.DataFrame(conteo,index=self.images)
-#        self.conteo.append(df)# Adjunta el conteo por cada carpeta
+        self.cont[1] += 1
         
     
     def processAll(self):
-        
-        # Crea el directorio donde se guardará TODOOoOoOO
+        self.threadTwo()
+        # Reinicie la lista con las imágenes
+        # Cree el directorio general para todos los resultados del programa 
         ansPath = 'Resultados_GUI'
         try:
             os.makedirs(ansPath)
         except:
-            print('El directorio ya existe')
+            print('El directorio ya existe.')
+            # REEMPLAZAR POR MENSAJE
         
-        
-        # Cree el directorio donde se guardarán los resultados
+        # Crea el directorio para las imágenes seleccionadas
         now = datetime.datetime.now()
         ansPath = 'Resultados_GUI/' + now.strftime("%Y-%m-%d")
         try:
             os.makedirs(ansPath)
         except:
-            print('El directorio ya existe')
+            print('El directorio ya existe.')
         
-        print('Comencé')
+        print('Comencé')# BARRA DE CARGA 
+        # Procesamiento de cada una de las imágenes
         for i in range(0,len(self.images_PATH)):
             print(self.images[i])
-            self.processOne(self.images_PATH[i],ansPath +'/'+ self.images[i],i)
+            self.processOne(self.images_PATH[i],ansPath,i)
         
-        # Conversion to dataframe
+        # Guarda el conteo en un archivo excel al terminar
         df = pd.DataFrame(self.conteo,index=self.images)
-        
-        with pd.ExcelWriter('Resultados_GUI/'+ now.strftime("%Y-%m-%d") + '/' + '05.04.2016' + '.xlsx') as writer:
-            df.to_excel(writer, sheet_name='Hoja1')
+        with pd.ExcelWriter('Resultados_GUI/'+ now.strftime("%Y-%m-%d") + '.xlsx') as writer:
+            df.to_excel(writer, sheet_name='05.04.2016')
 
-#            for i in range(0,len(self.conteo)):
-#                self.conteo[i].to_excel(writer,sheet_name='05.04.2016')
+
+    # Método para incrementar barra de tareas
+    def loadBar(self):
+        # Haga invisible el label y visible la barra de progreso
+        self.lblProcess.setVisible(True)
+        self.progressBar.setVisible(True)
+        self.lblImage.setVisible(False)
+        #Deshabilite los botones mientras está procesando
+        self.btnProcess.setEnabled(False)
+        self.btnRoot.setEnabled(False)
+        self.btnLoad.setEnabled(False)
+        self.btnViewRes.setEnabled(False)
+        self.btnLimpiar.setEnabled(False)
+        
+        while self.cont[1]/len(self.images) < 1:
+            time.sleep(1)# necesario para que vaya a ejecutar otros hilos
+            self.progressBar.setValue( np.around( (self.cont[1]/len(self.images))*100 ) )
+        
+        # Haga visible el label e invisible la barra de progreso
+        self.progressBar.setVisible(False)        
+        self.lblProcess.setVisible(False)
+        self.lblImage.setVisible(True)
+        self.pixmap = QtGui.QPixmap("Logos/picasso.jpg")
+        self.lblImage.setPixmap(self.pixmap)
+        # Habilite de nuevo los botones
+        self.btnProcess.setEnabled(True)
+        self.btnRoot.setEnabled(True)
+        self.btnLoad.setEnabled(True)
+        self.btnViewRes.setEnabled(True)
+        self.btnLimpiar.setEnabled(True)
+        self.btnViewRes.setVisible(True)
+        
+        self.cont[1] = 0
+
+        
+    # Hilo para el procesamiento de las imágenes
+    def threadOne(self):
+        self.run_thread = Thread(target=self.processAll)
+        self.run_thread.start() # start the thread
+        
+    # Hilo para la barra de carga
+    def threadTwo(self):
+        self.run_thread = Thread(target=self.loadBar)
+        self.run_thread.start() # start the thread
+    
     
         
-        
-#        import time
-#start_time = time.time()
-#main()
-#print("--- %s seconds ---" % (time.time() - start_time))
-        
+#            for i in range(0,len(self.conteo)):
+#                self.conteo[i].to_excel(writer,sheet_name='05.04.2016')    
 #**********COSAS A HACER*************
     '''
     -Agregar opción de remover los archivos escogidos por la persona(BTN)
@@ -262,34 +337,29 @@ class Ui_Dialog(object):
         Tener la posibilidad de visualizarlo en la misma interfaz
         o exportarlo como archivo de excel.
     - Visualizar resultados desde memoria ?
-    - Que la imagen resultado se muestre con las colonias detectadas
-    como aquellas con un contorno de algún color (en lo posible no cuadrado)
     - Opción de previsualizar imágenes en la GUI principal (abrir otra ventana)
-    - Agregar barra de carga a la interfaz principal
     - Opción de ver resultados (abrir otra ventana)
     - Opción de guardar conteo como archivo de excel o .csv e imágenes
     en determinado formato
-    - No tener en cuenta aquellos pozos que se encuentren recortados
+    - No tener en cuenta aquellos pozos que se encuentren recortados (Reportarlo)
     - Agregar la posibilidad de que la persona pueda agregar aquellas
     colonias que no fueron detectadas mediante el algoritmo haciendo
     una selección de la región o del pixel (semilla) y efectuando
     region growing.
     - Opción de acercamiento
     
-    Resultados
-    - Contabilizar el tiempo que tarda por cada imagen para sacar promedio
-    (tener en cuenta que algunas de las imágenes tienen diferentes tamaños)
-    - Especificidad y sensibilidad (falsos positivos,...)
-
-    Problemas
-    - La visualización mediante botones < > aún no funcilona bien
-
     '''
     #***********************************
-        
 
+    
 
-        
+#class myThread(threading.Thread,Ui_Dialog):#HERENCIA
+#    def __init__(self,proc):
+#        threading.Thread.__init__(self)
+#        self.w = proc
+#        self.count = 0
+#    def run(self):
+#        proc.processAll(self)
             
 if __name__ == "__main__":
     import sys
