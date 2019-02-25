@@ -18,6 +18,10 @@ import pandas as pd
 import numpy as np
 from threading import Thread
 
+#from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+#from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+#from matplotlib.figure import Figure
+
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -53,14 +57,43 @@ class Ui_Dialog(object):
         self.groupBox.setGeometry(QtCore.QRect(20, 90, 661, 411))
         self.groupBox.setTitle("")
         self.groupBox.setObjectName("groupBox")
+        
+        #Label para las coordenadas
+        self.label = QtWidgets.QLabel(self.groupBox)
+        self.label.setGeometry(QtCore.QRect(20, 390, 251, 16))
+        self.label.setText("")
+        self.label.setObjectName("label")
+        self.label.setVisible(False)
+        
         self.lblImage = QtWidgets.QLabel(self.groupBox)
-        self.lblImage.setGeometry(QtCore.QRect(10, 10, 639, 389))
+        self.lblImage.setGeometry(QtCore.QRect(18, 30, 621, 351))
+        self.lblImage.setMouseTracking(True)
         self.lblImage.setText("")
         self.lblImage.setObjectName("lblImage")
         # Imagen inicial en la interfaz
         self.pixmap = QtGui.QPixmap("Logos/rembrandt.jpg")
         self.lblImage.setPixmap(self.pixmap)
         self.lblImage.setScaledContents(True)
+        self.lblImage.mouseMoveEvent = self.mouseMoveEvent
+        
+        # Label para el número de la imagen 
+        self.label_2 = QtWidgets.QLabel(self.groupBox)
+        self.label_2.setGeometry(QtCore.QRect(560, 10, 91, 20))
+        self.label_2.setText("")
+        self.label_2.setObjectName("label_2")
+        # Label para el nombre de la imagen
+        self.label_3 = QtWidgets.QLabel(self.groupBox)
+        self.label_3.setGeometry(QtCore.QRect(18, 10, 391, 20))
+        self.label_3.setText("")
+        self.label_3.setObjectName("label_3")
+        
+#        self.figure = Figure()
+#        self.canvas = FigureCanvas(self.figure)
+#        self.toolbar = NavigationToolbar(self.canvas,self)
+#        self.groupbox.addWidget(self.toolbar)
+#        self.groupbox.addWidget(self.canvas)
+#        self.groupBox.addWidget(self.button)
+        
         self.progressBar = QtWidgets.QProgressBar(self.groupBox)
         self.progressBar.setGeometry(QtCore.QRect(280, 200, 118, 23))
         self.progressBar.setProperty("value", 24)
@@ -124,6 +157,8 @@ class Ui_Dialog(object):
         self.btnAdd = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
         self.btnAdd.setObjectName("btnAdd")
         self.btnAdd.clicked.connect(self.right)
+        
+        
         self.horizontalLayout_2.addWidget(self.btnAdd)
         
         self.groupBox_4 = QtWidgets.QGroupBox(Dialog)
@@ -213,13 +248,37 @@ class Ui_Dialog(object):
         self.pixmap = QtGui.QPixmap("Logos/rembrandt.jpg")
         self.lblImage.setPixmap(self.pixmap)
         self.btnViewRes.setVisible(False)
+        self.label_2.setText("") 
+        self.label_3.setText("") 
         
     #Visualiza la imagen actual en el label
     def viewImage(self,num=0):
-        try:
+        if len(self.images) > 0:
             self.pixmap = QtGui.QPixmap(self.images_PATH[num])
-            self.lblImage.setPixmap(self.pixmap)            
-        except:
+            self.lblImage.setPixmap(self.pixmap)
+            # Haga visible el label de las coordenadas
+            self.label.setVisible(True)
+            # Haga invisible el boton de ver resultados
+            self.btnViewRes.setVisible(False)
+            # Haga visibles los labels de numeración y nombre
+            self.label_2.setVisible(True) 
+            self.label_3.setVisible(True)
+            
+            #
+            self.label_2.setText("Imagen " + str(num+1) + " de " + str(len(self.images)))
+            self.label_3.setText(self.images[num])
+            
+            # Habilite y deshabilite los botones de derecha e izquierda acorde
+            if self.cont[0] == 0:
+                self.btnRemove.setEnabled(False)
+            else:
+                self.btnRemove.setEnabled(True)
+            
+            if self.cont[0] == len(self.images)-1:
+                self.btnAdd.setEnabled(False)
+            else:
+                self.btnAdd.setEnabled(True)
+        else:
             self.msg.setVisible(True)
 
         
@@ -314,6 +373,8 @@ class Ui_Dialog(object):
         self.btnViewRes.setEnabled(True)
         self.btnLimpiar.setEnabled(True)
         self.btnViewRes.setVisible(True)
+#        self.label_2.setVisible(False) 
+#        self.label_3.setVisible(False)
         
         self.cont[1] = 0
 
@@ -321,9 +382,13 @@ class Ui_Dialog(object):
     # Hilo para el procesamiento de las imágenes
     def threadOne(self):
         if len(self.images) > 0:
+            self.label_2.setVisible(False) 
+            self.label_3.setVisible(False)
+            
             self.run_thread = Thread(target=self.processAll)
             self.run_thread.start() # start the thread
         else:
+            #Mensaje de advertencia
             self.msg.setVisible(True)
             
     # Hilo para la barra de carga
@@ -332,6 +397,11 @@ class Ui_Dialog(object):
         self.run_thread.start() # start the thread
     
     
+    def mouseMoveEvent(self,event):
+        x = event.x()
+        y = event.y()
+        text = "x: {0}, y: {1}".format(x, y)
+        self.label.setText(text)
         
 #            for i in range(0,len(self.conteo)):
 #                self.conteo[i].to_excel(writer,sheet_name='05.04.2016')    
