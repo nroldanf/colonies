@@ -60,40 +60,7 @@ plt.figure()
 plt.imshow(BW,cmap='gray')
 plt.show()
 
-'''
-Determinación de marcadores con transformada de distancia y máximos locales
-Aplicación de segmentación por watershed basada en marcadores
-'''
-#I = imread('IMTEST.png')# Imagen binaria: Blanco-Objetos, Negro-Fondo
-# Transformada de distancia euclidiana:
-# Asigna a cada pixel el valor de la distancia euclidiana al pixel de fondo
-# más cercano.
-dist = distance_transform_edt(BW)
-plt.figure()
-plt.imshow(dist,cmap='gray')
-plt.show()
-
-#plot_comparison(I,dist,'Transformada de distancia')
-# Máximos locales hallados en una vecindad de 3x3
-local_maxi = peak_local_max(dist, indices=False, footprint=np.ones((2, 2)),
-                            labels=BW)
-
-plt.figure()
-plt.imshow(local_maxi,cmap='gray')
-plt.show()
-# footprint es la vecindad para hallar máximos regionales
-#plot_comparison(dist,local_maxi,'Máximos regionales')
-markers = ndi.label(local_maxi)[0]# Lo convierte a una matriz de enteros
-# Se invierte para que así los máximos ahora sean mínimos (catch basins)
-labels = watershed(-dist, markers, mask=BW)# Algoritmo basado en marcadores
-
-plt.figure()
-plt.axis('off')
-plt.imshow(labels,  cmap=plt.cm.nipy_spectral, interpolation='nearest')
-plt.title('Watershed')
-plt.show()
-
-# Idea: Esto entra en coordBlobs
+# Otsu -> Watershed -> coordBlobs 
 # In[] CellCounter
 
 I = imread(gen_aut+'/'+images_aut[0])
@@ -104,6 +71,7 @@ plt.imshow(Inew,cmap='gray')
 plt.show()
 
 # Igual que con las de OpenCFU -> segmentación por DE en cielab
+# Tener en cuenta plano de luminancia
 
 # In[] Binarización de Ground Truth
 
@@ -251,7 +219,7 @@ d = {'TP':TP_FP[0,:], 'FP':TP_FP[1,:],'FN':FN_TN[0,:],'TN':FN_TN[1,:],
 df = pd.DataFrame(data=d)
 
 #tabla = []
-tabla.append(df)
+#tabla.append(df)
 #
 with pd.ExcelWriter('Resultados_GUI/Folder_Colonias/' 'Segundo' + '.xlsx') as writer:
             df.to_excel(writer, sheet_name='05.04.2016')
