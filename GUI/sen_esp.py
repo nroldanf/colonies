@@ -95,6 +95,7 @@ plt.show()
 
 # Idea: Esto entra en coordBlobs
 # In[] CellCounter
+
 I = imread(gen_aut+'/'+images_aut[0])
 Inew = colorPro(I[:,:,0:3],60)
 
@@ -102,7 +103,7 @@ plt.figure()
 plt.imshow(Inew,cmap='gray')
 plt.show()
 
-
+# Igual que con las de OpenCFU -> segmentación por DE en cielab
 
 # In[] Binarización de Ground Truth
 
