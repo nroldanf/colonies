@@ -23,6 +23,9 @@ from skimage.color import rgb2gray
 from skimage.morphology import diamond
 from skimage.filters.thresholding import threshold_otsu
 from skimage.transform import resize
+from scipy.ndimage.morphology import distance_transform_edt
+from skimage.morphology import watershed
+from scipy import ndimage as ndi
 
 # In[]
 folders = ['05.04.2016','25.09.2015','26.04.2016']
@@ -36,17 +39,71 @@ folders = ['05.04.2016','25.09.2015','26.04.2016']
 #images_aut.pop(10)
 
 # *** Otros programas ***
-gen_aut = 'Resultados_OpenCFU/'+folders[2]
+gen_aut = 'Resultados_Cellcounter/'+folders[0]
 images_aut = []
 images_aut.append(os.listdir(gen_aut))
 images_aut = images_aut[0]
-images_aut.pop(6)
-images_aut.pop(10)
+#images_aut.pop(6)
+#images_aut.pop(10)
 # *** Imágenes del conteo manual ***
 gen = 'Fotos/Imagenes_Manual/'+folders[2]
 images = []
 images.append(os.listdir(gen))
 images = images[0]
+# In[] CellProfiler
+I = imread(gen_aut+'/'+images_aut[0])
+Ig = rgb2gray(I)
+t = threshold_otsu(Ig)# plano verde y umbraliza
+BW = Ig > t
+
+plt.figure()
+plt.imshow(BW,cmap='gray')
+plt.show()
+
+'''
+Determinación de marcadores con transformada de distancia y máximos locales
+Aplicación de segmentación por watershed basada en marcadores
+'''
+#I = imread('IMTEST.png')# Imagen binaria: Blanco-Objetos, Negro-Fondo
+# Transformada de distancia euclidiana:
+# Asigna a cada pixel el valor de la distancia euclidiana al pixel de fondo
+# más cercano.
+dist = distance_transform_edt(BW)
+plt.figure()
+plt.imshow(dist,cmap='gray')
+plt.show()
+
+#plot_comparison(I,dist,'Transformada de distancia')
+# Máximos locales hallados en una vecindad de 3x3
+local_maxi = peak_local_max(dist, indices=False, footprint=np.ones((2, 2)),
+                            labels=BW)
+
+plt.figure()
+plt.imshow(local_maxi,cmap='gray')
+plt.show()
+# footprint es la vecindad para hallar máximos regionales
+#plot_comparison(dist,local_maxi,'Máximos regionales')
+markers = ndi.label(local_maxi)[0]# Lo convierte a una matriz de enteros
+# Se invierte para que así los máximos ahora sean mínimos (catch basins)
+labels = watershed(-dist, markers, mask=BW)# Algoritmo basado en marcadores
+
+plt.figure()
+plt.axis('off')
+plt.imshow(labels,  cmap=plt.cm.nipy_spectral, interpolation='nearest')
+plt.title('Watershed')
+plt.show()
+
+# Idea: Esto entra en coordBlobs
+# In[] CellCounter
+I = imread(gen_aut+'/'+images_aut[0])
+Inew = colorPro(I[:,:,0:3],60)
+
+plt.figure()
+plt.imshow(Inew,cmap='gray')
+plt.show()
+
+
+
 # In[] Binarización de Ground Truth
 
 # Máscara de la de puntos rojos para cálculo de especificidad
@@ -348,3 +405,13 @@ def colorPro(I,umbral):
                 I[i,j,2] = 0
     return I
 
+def watershedDT(self,I):
+    dist = distance_transform_edt(I)
+    # Máximos locales hallados en una vecindad de 3x3
+    local_maxi = peak_local_max(dist, indices=False, footprint=np.ones((3, 3)),
+                                labels=I)
+    # footprint es la vecindad para hallar máximos regionales
+    markers = ndi.label(local_maxi)[0]# Lo convierte a una matriz de enteros
+    # Se invierte para que así los máximos ahora sean mínimos (catch basins)
+    labels = watershed(-dist, markers, mask=I)# Algoritmo basado en marcadores
+    return labels
