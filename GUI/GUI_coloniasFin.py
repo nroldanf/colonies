@@ -86,14 +86,7 @@ class Ui_Dialog(object):
         self.label_3.setGeometry(QtCore.QRect(18, 10, 391, 20))
         self.label_3.setText("")
         self.label_3.setObjectName("label_3")
-        
-#        self.figure = Figure()
-#        self.canvas = FigureCanvas(self.figure)
-#        self.toolbar = NavigationToolbar(self.canvas,self)
-#        self.groupbox.addWidget(self.toolbar)
-#        self.groupbox.addWidget(self.canvas)
-#        self.groupBox.addWidget(self.button)
-        
+                
         self.progressBar = QtWidgets.QProgressBar(self.groupBox)
         self.progressBar.setGeometry(QtCore.QRect(280, 200, 118, 23))
         self.progressBar.setProperty("value", 24)
@@ -241,7 +234,6 @@ class Ui_Dialog(object):
         self.images.clear()
         self.listImags.clear()
         self.timing.clear()
-        
         # 0 imágenes seleccionadas
         self.lblFolder_2.setText("Imágenes seleccionadas: " + str( len(self.images)) )
         # Limpie el label donde se muestra la imagen
@@ -263,8 +255,6 @@ class Ui_Dialog(object):
             # Haga visibles los labels de numeración y nombre
             self.label_2.setVisible(True) 
             self.label_3.setVisible(True)
-            
-            #
             self.label_2.setText("Imagen " + str(num+1) + " de " + str(len(self.images)))
             self.label_3.setText(self.images[num])
             
@@ -273,7 +263,6 @@ class Ui_Dialog(object):
                 self.btnRemove.setEnabled(False)
             else:
                 self.btnRemove.setEnabled(True)
-            
             if self.cont[0] == len(self.images)-1:
                 self.btnAdd.setEnabled(False)
             else:
@@ -322,7 +311,6 @@ class Ui_Dialog(object):
         except:
             print('El directorio ya existe.')
             # REEMPLAZAR POR MENSAJE
-        
         # Crea el directorio para las imágenes seleccionadas
         now = datetime.datetime.now()
         ansPath = 'Resultados_GUI/' + now.strftime("%Y-%m-%d")

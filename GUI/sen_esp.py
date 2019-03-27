@@ -39,17 +39,23 @@ folders = ['05.04.2016','25.09.2015','26.04.2016']
 #images_aut.pop(10)
 
 # *** Otros programas ***
-gen_aut = 'Resultados_Cellcounter/'+folders[0]
+gen_aut = 'Resultados_OpenCFU/'+folders[2]
 images_aut = []
 images_aut.append(os.listdir(gen_aut))
-images_aut = images_aut[0]
-#images_aut.pop(6)
+images_aut = images_aut[0];
+images_aut.pop(0)
+images_aut.pop(11)
+
+#images_aut.pop(11)
 #images_aut.pop(10)
 # *** Imágenes del conteo manual ***
 gen = 'Fotos/Imagenes_Manual/'+folders[2]
 images = []
 images.append(os.listdir(gen))
 images = images[0]
+images  = images[0:11]
+#images.pop(0)
+#images.pop(6)
 # In[] CellProfiler
 I = imread(gen_aut+'/'+images_aut[0])
 Ig = rgb2gray(I)
@@ -73,8 +79,17 @@ plt.show()
 # Igual que con las de OpenCFU -> segmentación por DE en cielab
 # Tener en cuenta plano de luminancia
 
-# In[] Binarización de Ground Truth
+# In[]
+im = 0
+I = imread(gen+'/'+images[im]);[m,n,p] = I.shape
+I2 = imread(gen_aut+'/'+images_aut[im])
+I2 = resize(I2, [m,n], order=1, mode='reflect', cval=0, clip=True,preserve_range=False)
 
+plt.figure()
+plt.imshow(I2,cmap='gray')
+plt.show()
+
+# In[] Binarización de Ground Truth
 # Máscara de la de puntos rojos para cálculo de especificidad
 # Máscara de la de puntos azules para cálculo de sensibilidad
 # Necesario obtener las coordenadas de cada objeto con regionprops
@@ -92,7 +107,7 @@ plt.show()
     True negative = correctly rejected
         - 0 Propio, 0 manual: 
     False negative = incorrectly rejected
-        - 0 Propio, 1 manual: AND entre blobs, si 1 {elimine}
+        - 0 Propio, 1 manual: AND entre blobs, si 1 {elimine}w
         
     Sensibilidad: true positives/(true positives + false negatives)
     Especificidad: true negatives/(true negatives + false positives)
@@ -114,31 +129,29 @@ umbral_G = 70
 #*******************
 for im in range(0,len(images)):
     I = imread(gen+'/'+images[im]);[m,n,p] = I.shape
+    I
     I2 = imread(gen_aut+'/'+images_aut[im])
-    I2 = resize(I2, [m,n], order=1, mode='reflect', cval=0, clip=True,preserve_range=False, anti_aliasing=True, anti_aliasing_sigma=None)
-    
+    I2 = resize(I2, [m,n], order=1, mode='reflect', cval=0, clip=True,preserve_range=False)
+    I2 = I2[:,:,0:3];
     centros = corrCruz(I,template,r_pozo,se)
-    # *************** Manuales ****************************
+    # ************************ Manuales ****************************
     BW_r1 = segColor(I,[255,0,0])# Rojo 255,0,0
     BW_b1 = segColor(I,[0,0,255])# Azul 0,0,255
-    # *********************opencfu**********************************
+    # ********************* opencfu**********************************
     BW_au1 = colorPro(I2,umbral_G)# segmenta el color verde
-    t = threshold_otsu(BW_au1[:,:,2])# plano verde y umbraliza
-    BW_au1 = BW_au1[:,:,2] > t
-    # *******************************************************    
-    #Para cada pozo
+    t = threshold_otsu(BW_au1[:,:,1])# plano verde y umbraliza
+    BW_au1 = BW_au1[:,:,1] > t
+    # ***************************************************************
     mBW = np.zeros([m,n])
     for p in range(0,len(centros)):
         try:
             BW_r = pozo(BW_r1,centros[p],r_pozo)
             BW_b = pozo(BW_b1,centros[p],r_pozo)
-            BW_au = pozo(BW_au1,centros[p],r_pozo)
-        
+            BW_au = pozo(BW_au1,centros[p],r_pozo)        
             # Obtenga las coordenadas de cada region conectada
             coodR = coordBlobs(BW_r)# lista de listas de tuplas ordenadas (x,y)
             coodB = coordBlobs(BW_b)
             coodAu = coordBlobs(BW_au)     
-            
             cA = [coodR,coodB,coodAu]
             
             for k in range(0,2):# Para máscara roja y azul
@@ -176,10 +189,9 @@ for im in range(0,len(images)):
                         esp1.append( (len(cA[k])-Tp) / len(cA[k]) )
                     except:
                         esp1.append(1)
-                        print('No hay elementos en el pozo '+ str(p) + 'de ' + images[im])
+                        print('No hay elementos en el pozo '+ str(p) + ' de ' + images[im])
                         
-            imsave(gen_aut+'/'+images_aut[im].replace(".bmp",".tiff"),mBW)# Guarde la imagen BW
-            
+            imsave(gen_aut+'/Coincidencias'+'/'+images_aut[im].replace(".png",".tiff"),mBW)# Guarde la imagen BW
         except:
             print('Pozo no valido')
             
@@ -201,7 +213,7 @@ l2 =  str("%.2f" % np.mean(esp1)) + ' ± ' + str("%.2f" % np.std(esp1))
 plt.figure()
 plt.hist(sen1,range=[0,1],label=l1)
 plt.xlabel('Sensibilidad')
-plt.ylabel('Pozos')
+plt.ylabel('Pozos detectados')
 plt.grid()
 plt.legend()
 plt.show()
@@ -209,7 +221,7 @@ plt.show()
 plt.figure()
 plt.hist(esp1,range=[0,1],label=l2)
 plt.xlabel('Especificidad')
-plt.ylabel('Pozos')
+plt.ylabel('Pozos detectados')
 plt.grid()
 plt.legend()
 plt.show()
@@ -220,9 +232,8 @@ df = pd.DataFrame(data=d)
 
 #tabla = []
 #tabla.append(df)
-#
-with pd.ExcelWriter('Resultados_GUI/Folder_Colonias/' 'Segundo' + '.xlsx') as writer:
-            df.to_excel(writer, sheet_name='05.04.2016')
+with pd.ExcelWriter('OpenCFU_26.04.2016' + '.xlsx') as writer:
+            df.to_excel(writer, sheet_name='26.04.2016')
 
 # In[]
 def loadImages(gen='Imagenes/'):
