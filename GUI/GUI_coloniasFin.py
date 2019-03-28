@@ -363,7 +363,7 @@ class Ui_Dialog(object):
         
         # Lea la imagen desde la carpeta de resultado
         now = datetime.datetime.now()
-        self.pixmap = QtGui.QPixmap('Resultados_GUI/' + now.strftime("%Y-%m-%d")+self.images[num].replace('jpg','tiff'))
+        self.pixmap = QtGui.QPixmap('Resultados_GUI/' + now.strftime("%Y-%m-%d")+'/'+'color_'+self.images[num].replace('jpg','tiff'))
         self.lblImage.setPixmap(self.pixmap)
         # Haga visible el label de las coordenadas
         self.label.setVisible(True)
