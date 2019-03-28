@@ -182,7 +182,7 @@ class Ui_Dialog(object):
         self.groupBoxRes.setGeometry(QtCore.QRect(700, 90, 271, 291))
         self.groupBoxRes.setTitle("")
         self.groupBoxRes.setObjectName("groupBoxRes")
-        self.groupBox.setVisible(False)
+        self.groupBoxRes.setVisible(False)
         
         self.gridLayoutWidget_2 = QtWidgets.QWidget(self.groupBoxRes)
         self.gridLayoutWidget_2.setGeometry(QtCore.QRect(10, 40, 251, 231))
@@ -285,11 +285,17 @@ class Ui_Dialog(object):
     
     # Abrir nueva ventana para visualizar resultados
     def openRes(self):
-        self.window = QtWidgets.QDialog()
-        self.ui = Ui_Dialog2()
-        self.ui.setupUi2(self.window)
-        self.window.show()
-
+        # ***** MOSTRAR CON OTRA VENTANA********
+#        self.window = QtWidgets.QDialog()
+#        self.ui = Ui_Dialog2()
+#        self.ui.setupUi2(self.window)
+#        self.window.show()
+        # ****** MOSTRAR EN LA MISMA GUI *********
+        self.btnViewRes.setVisible(False)
+        self.viewImageRes(num=0)
+        self.showCounting(num=0)
+        
+        
     # Abrir ventana de dialogo para seleccionar y mostrar los nombres en 
     # el list widget
     def getImages(self):
@@ -319,6 +325,7 @@ class Ui_Dialog(object):
         self.pixmap = QtGui.QPixmap("Logos/rembrandt.jpg")
         self.lblImage.setPixmap(self.pixmap)
         self.btnViewRes.setVisible(False)
+        self.groupBoxRes.setVisible(False)# oculte la tabla de resultados
         self.label_2.setText("") 
         self.label_3.setText("") 
         
@@ -349,19 +356,64 @@ class Ui_Dialog(object):
         else:
             self.msg.setVisible(True)
 
+    def viewImageRes(self,num=0):
+#        'Resultados_GUI/' + now.strftime("%Y-%m-%d")
+#        replace('.jpg','.tiff')
+#        images[num]
         
+        # Lea la imagen desde la carpeta de resultado
+        now = datetime.datetime.now()
+        self.pixmap = QtGui.QPixmap('Resultados_GUI/' + now.strftime("%Y-%m-%d")+self.images[num].replace('jpg','tiff'))
+        self.lblImage.setPixmap(self.pixmap)
+        # Haga visible el label de las coordenadas
+        self.label.setVisible(True)
+        # Haga invisible el boton de ver resultados
+        self.btnViewRes.setVisible(False)
+        # Haga visibles los labels de numeración y nombre
+        self.label_2.setVisible(True) 
+        self.label_3.setVisible(True)
+        self.label_2.setText("Imagen " + str(num+1) + " de " + str(len(self.images)))
+        self.label_3.setText(self.images[num])
+        # Habilite y deshabilite los botones de derecha e izquierda acorde
+        if self.cont[0] == 0:
+            self.btnRemove.setEnabled(False)
+        else:
+            self.btnRemove.setEnabled(True)
+        if self.cont[0] == len(self.images)-1:
+            self.btnAdd.setEnabled(False)
+        else:
+            self.btnAdd.setEnabled(True)
+
+
+    def showCounting(self,num=0):
+        if len(self.images) > 0:
+            # Para cada pozo detectado
+#            finFor = len(self.I_cla.)
+#            for i in range(0,6):# POR AHORA FIJO
+            
+            self.lblWell1.setText(str(self.conteo[num][0]))
+            self.lblWell2.setText(str(self.conteo[num][1]))
+            self.lblWell3.setText(str(self.conteo[num][2]))
+            self.lblWell4.setText(str(self.conteo[num][3]))
+            self.lblWell5.setText(str(self.conteo[num][4]))
+            self.lblWell6.setText(str(self.conteo[num][5]))
+        else:
+            self.msg.setVisible(True)    
+
     # Incrementa el contador para visualizar la siguiente imagen en la lista
     def right(self):
         # si el contador es menor a la longitud de la lista de imágenes
         if self.cont[0] < len(self.images_PATH)-1:
             self.cont[0] += 1
         self.viewImage(self.cont[0])
+        self.showCounting(self.cont[0])
     
     # Decrementa el contador para visualizar la siguiente imagen
     def left(self):
         if self.cont[0] > 0:
             self.cont[0] -= 1
         self.viewImage(self.cont[0])
+        self.showCounting(self.cont[0])
         
     # Procesa una imagen
     def processOne(self,PATH,name,index):
@@ -404,11 +456,16 @@ class Ui_Dialog(object):
             print(self.images[i])
             self.processOne(self.images_PATH[i],ansPath,i)
         
+        print(self.conteo[0])
+        
         # Guarda el conteo en un archivo excel al terminar
-        df = pd.DataFrame(self.conteo,index=self.images)
-        with pd.ExcelWriter('Resultados_GUI/'+ now.strftime("%Y-%m-%d") + '.xlsx') as writer:
-            df.to_excel(writer, sheet_name='05.04.2016')
-            
+#        df = pd.DataFrame(self.conteo,index=self.images)
+#        with pd.ExcelWriter('Resultados_GUI/'+ now.strftime("%Y-%m-%d") + '.xlsx') as writer:
+#            df.to_excel(writer, sheet_name='05.04.2016')
+
+
+    
+        
 
     # Método para incrementar barra de tareas
     def loadBar(self):
@@ -440,6 +497,10 @@ class Ui_Dialog(object):
         self.btnViewRes.setEnabled(True)
         self.btnLimpiar.setEnabled(True)
         self.btnViewRes.setVisible(True)
+        self.groupBoxRes.setVisible(True)
+        
+        
+        
 #        self.label_2.setVisible(False) 
 #        self.label_3.setVisible(False)
         

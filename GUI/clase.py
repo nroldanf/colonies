@@ -38,7 +38,7 @@ class Colonias:
         self.s1 = diamond(1)# Elemento estructurante para la apertura
         self.s2 = diamond(6)# Elemento estructurante para el black Top Hat
         self.template = self.__circle()
-        
+        self.centros = 0
     
     # Helpers    
     def mejoraConstraste(self):
@@ -119,6 +119,7 @@ class Colonias:
         
         centros = sorted(centros)
         centros = np.asarray(centros)#(x,y)
+        self.centros= centros
         
         return centros
     
