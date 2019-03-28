@@ -345,6 +345,7 @@ class Ui_Dialog(object):
         self.lblImage.setPixmap(self.pixmap)
         self.btnViewRes.setVisible(False)
         self.groupBoxRes.setVisible(False)# oculte la tabla de resultados
+        self.btnSwitch.setVisible(False)
         self.label_2.setText("") 
         self.label_3.setText("") 
         
@@ -391,6 +392,7 @@ class Ui_Dialog(object):
         # Haga invisible el boton de ver resultados
         self.btnViewRes.setVisible(False)
         
+        
         self.btnSwitch.setVisible(True)
         self.btnSwitch.setText("Original")
         
@@ -427,13 +429,14 @@ class Ui_Dialog(object):
         if self.cont[0] < len(self.images_PATH)-1:
             self.cont[0] += 1
 #        self.viewImage(self.cont[0])
-        self.showCounting(self.cont[0])
+        
         # Dependiendo de la bandera visualice el original o el procesado
         if self.switchFlag == 0:
             self.viewImage(self.cont[0])
             print("Derecha")
         else:
             self.viewImageRes(self.cont[0])
+            self.showCounting(self.cont[0])
             print("Derecha")
         
     
@@ -442,12 +445,12 @@ class Ui_Dialog(object):
         if self.cont[0] > 0:
             self.cont[0] -= 1
 #        self.viewImage(self.cont[0])
-        self.showCounting(self.cont[0])
         if self.switchFlag == 0:
             self.viewImage(self.cont[0])
             print("Izquierda")
         else:
             self.viewImageRes(self.cont[0])
+            self.showCounting(self.cont[0])
             print("Izquierda")
     # Procesa una imagen
     def processOne(self,PATH,name,index):
@@ -490,7 +493,7 @@ class Ui_Dialog(object):
             print(self.images[i])
             self.processOne(self.images_PATH[i],ansPath,i)
         
-        print(self.conteo[0])
+        
         
         # Guarda el conteo en un archivo excel al terminar
 #        df = pd.DataFrame(self.conteo,index=self.images)
@@ -533,7 +536,7 @@ class Ui_Dialog(object):
         self.btnViewRes.setVisible(True)
         self.groupBoxRes.setVisible(True)
         
-        
+        self.switchFlag = 1
         
 #        self.label_2.setVisible(False) 
 #        self.label_3.setVisible(False)
