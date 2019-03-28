@@ -110,7 +110,6 @@ class Ui_Dialog(object):
         self.listImags.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.listImags.setObjectName("listImags")
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-        
         self.groupBoxRes = QtWidgets.QGroupBox(Dialog)
         self.groupBoxRes.setGeometry(QtCore.QRect(700, 90, 271, 291))
         self.groupBoxRes.setTitle("")
@@ -179,6 +178,10 @@ class Ui_Dialog(object):
         self.label_16.setGeometry(QtCore.QRect(70, 10, 121, 20))
         self.label_16.setAlignment(QtCore.Qt.AlignCenter)
         self.label_16.setObjectName("label_16")
+        self.btnSwitch = QtWidgets.QPushButton(Dialog)
+        self.btnSwitch.setGeometry(QtCore.QRect(770, 400, 122, 23))
+        self.btnSwitch.setText("")
+        self.btnSwitch.setObjectName("btnSwitch")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)

@@ -33,6 +33,7 @@ class Ui_Dialog(object):
         self.cont = [0,0]
         self.conteo = []
         self.timing = []
+        self.switchFlag = 0# Bandera que determina si se visualiza el original o procesado
         # *** Interfaz ***
         Dialog.setObjectName("Dialog")
         Dialog.resize(986, 675)
@@ -248,6 +249,14 @@ class Ui_Dialog(object):
         self.label_16.setGeometry(QtCore.QRect(70, 10, 121, 20))
         self.label_16.setAlignment(QtCore.Qt.AlignCenter)
         self.label_16.setObjectName("label_16")
+        
+        self.btnSwitch = QtWidgets.QPushButton(Dialog)
+        self.btnSwitch.setGeometry(QtCore.QRect(770, 400, 122, 23))
+        self.btnSwitch.setText("")
+        self.btnSwitch.setObjectName("btnSwitch")
+        self.btnSwitch.clicked.connect(self.switch)
+        self.btnSwitch.setVisible(False)
+        
         # Mensaje de advertencia
         self.msg = QtWidgets.QMessageBox()
         self.msg.setWindowTitle('Previsualizar')
@@ -295,6 +304,16 @@ class Ui_Dialog(object):
         self.viewImageRes(num=0)
         self.showCounting(num=0)
         
+    def switch(self):
+        if self.switchFlag == 0:
+            self.switchFlag = 1
+            self.viewImageRes(self.cont[0])
+            self.btnSwitch.setText("Original")
+        else:
+            self.switchFlag = 0
+            self.viewImage(self.cont[0])
+            self.btnSwitch.setText("Procesada")
+
         
     # Abrir ventana de dialogo para seleccionar y mostrar los nombres en 
     # el list widget
@@ -338,6 +357,8 @@ class Ui_Dialog(object):
             self.label.setVisible(True)
             # Haga invisible el boton de ver resultados
             self.btnViewRes.setVisible(False)
+            
+            
             # Haga visibles los labels de numeración y nombre
             self.label_2.setVisible(True) 
             self.label_3.setVisible(True)
@@ -369,6 +390,10 @@ class Ui_Dialog(object):
         self.label.setVisible(True)
         # Haga invisible el boton de ver resultados
         self.btnViewRes.setVisible(False)
+        
+        self.btnSwitch.setVisible(True)
+        self.btnSwitch.setText("Original")
+        
         # Haga visibles los labels de numeración y nombre
         self.label_2.setVisible(True) 
         self.label_3.setVisible(True)
@@ -387,10 +412,6 @@ class Ui_Dialog(object):
 
     def showCounting(self,num=0):
         if len(self.images) > 0:
-            # Para cada pozo detectado
-#            finFor = len(self.I_cla.)
-#            for i in range(0,6):# POR AHORA FIJO
-            
             self.lblWell1.setText(str(self.conteo[num][0]))
             self.lblWell2.setText(str(self.conteo[num][1]))
             self.lblWell3.setText(str(self.conteo[num][2]))
@@ -405,16 +426,29 @@ class Ui_Dialog(object):
         # si el contador es menor a la longitud de la lista de imágenes
         if self.cont[0] < len(self.images_PATH)-1:
             self.cont[0] += 1
-        self.viewImage(self.cont[0])
+#        self.viewImage(self.cont[0])
         self.showCounting(self.cont[0])
+        # Dependiendo de la bandera visualice el original o el procesado
+        if self.switchFlag == 0:
+            self.viewImage(self.cont[0])
+            print("Derecha")
+        else:
+            self.viewImageRes(self.cont[0])
+            print("Derecha")
+        
     
     # Decrementa el contador para visualizar la siguiente imagen
     def left(self):
         if self.cont[0] > 0:
             self.cont[0] -= 1
-        self.viewImage(self.cont[0])
+#        self.viewImage(self.cont[0])
         self.showCounting(self.cont[0])
-        
+        if self.switchFlag == 0:
+            self.viewImage(self.cont[0])
+            print("Izquierda")
+        else:
+            self.viewImageRes(self.cont[0])
+            print("Izquierda")
     # Procesa una imagen
     def processOne(self,PATH,name,index):
         nameMono = name +'/'+ self.images[index]# Imagen BW

@@ -467,6 +467,19 @@
     </property>
    </widget>
   </widget>
+  <widget class="QPushButton" name="btnSwitch">
+   <property name="geometry">
+    <rect>
+     <x>770</x>
+     <y>400</y>
+     <width>122</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>
