@@ -6,11 +6,12 @@ Created on Tue Jan 15 13:42:04 2019
 """
 import numpy as np
 import math
-from skimage.color import rgb2gray
+import matplotlib.pyplot as plt
+from skimage.color import rgb2gray,rgb2hsv
 from skimage.color import rgb2lab
 from skimage.exposure import rescale_intensity, adjust_gamma
 from skimage.feature import match_template,peak_local_max,canny
-from skimage.morphology import diamond
+from skimage.morphology import diamond, disk
 from skimage.morphology import opening, black_tophat, closing
 from skimage.filters.thresholding import threshold_otsu
 from skimage.measure import regionprops
@@ -20,6 +21,8 @@ from sklearn.cluster import KMeans
 from scipy.ndimage.morphology import distance_transform_edt
 from skimage.morphology import watershed
 from scipy import ndimage as ndi
+
+
 
 
 
@@ -43,20 +46,49 @@ class Colonias:
         I_gray = rescale_intensity(I_gray,in_range=(0.2,0.8),out_range=(0,1))
         return I_gray
     
+    
+    # 3. P
     def preprocess(self):
         Igray = rgb2gray(self.image)
-        Ieq = adjust_gamma(Igray,0.4)# Mejora de contraste
+        Ieq = adjust_gamma(Igray,0.4)
         Iop = opening(Ieq,self.s1)
-        
         # Retorna lo que sea más pequeño que el elemento estructurante
         # Podría ser un parámetro definido por el usuario, basado en 
         # la colonia más grande
         If = black_tophat(Iop,self.s2)
-        If2 = adjust_gamma(If,0.7)# Mejora de contraste
+        If2 = adjust_gamma(If,0.8)# Mejora de contraste
+#        self.hist_comparison(If,If2,'gamma 0.8')
+#        self.hist_comparison(If,If3,'gamma 0.7')
         # Binarización
         thresh = threshold_otsu(If2)
         BW = If > thresh
-        return BW
+        return BW,If2
+    
+    
+    # 1. Umbralización con el plano de value
+    def preprocessHSV_value(self):
+        I = np.copy(self.image)
+        for i in range(0,3):
+            I[:,:,i] = adjust_gamma(I[:,:,i],0.4)
+            I[:,:,i] = opening(I[:,:,i],self.s1)
+            I[:,:,i] = black_tophat(I[:,:,i],self.s2)
+            I[:,:,i] = adjust_gamma(I[:,:,i],0.8)
+            
+        hsv = rgb2hsv(I)        
+        thresh = threshold_otsu(hsv[:,:,2])
+        BW = hsv[:,:,2] > thresh
+        
+        return hsv[:,:,2],BW# retorne plano de value (intensidad)
+    
+    # 2. Umbralización con el plano de saturation
+    def preprocessHSV_saturation(self):
+        I = np.copy(self.image)
+        hsv = rgb2hsv(I)
+        thresh = threshold_otsu(hsv[:,:,1])
+        BW = hsv[:,:,1] > thresh
+        return hsv[:,:,1],BW# retorne plano de value (intensidad)
+        
+    
         
     def __canny(self):
         BW = canny(self.mejoraConstraste(),sigma=0.5)
@@ -119,6 +151,12 @@ class Colonias:
         BW = I_pozo > thresh
         return BW
     
+    def otsuMean(self,I_pozo,I_gray,centro):
+        I = I_gray[(centro[1]-self.r_pozo):(centro[1]+self.r_pozo),(centro[0]-self.r_pozo):(centro[0]+self.r_pozo)]
+        prom = np.mean(I)
+        thresh = threshold_otsu(I)*prom
+        BW = I_pozo > thresh
+        return BW
     
     def pozo_anillo(self,m_I,c):
         
@@ -140,7 +178,9 @@ class Colonias:
         # Tomar imágenes con areas mayores a X
         for region in regionprops (labeled):
             # Numero de pixeles dentro de la envolvente convexa
-            area_convexa = region.convex_area 
+            area_convexa = region.convex_area
+            area = region.area
+            ecc = region.eccentricity
             #Razon entre pixeles de la region y pixeles de la envolvente
     #        solidez = region.solidity 
             eje_mayor = region.major_axis_length
@@ -150,7 +190,7 @@ class Colonias:
             else:
                 axes_ratio = 0
                 
-            if area_convexa < 7 and axes_ratio < 1 or area_convexa > 80: 
+            if area_convexa < 7 or ecc > 0.9 or area_convexa > 80: 
                 Iseg[labeled == i] = 0
     
             i += 1
@@ -179,7 +219,7 @@ class Colonias:
         return I_fin
     
 
-    
+
 
 #    def clustering(self):
 #        # Number of clusters to be used
@@ -211,7 +251,11 @@ class Colonias:
     
     
     def processing(self):
-        I_gray = self.preprocess()
+        BW,I_gray = self.preprocess()
+        
+#        Ivalue = self.preprocessHSV()
+#        I_gray = rgb2gray(self.image)
+        
         centros = self.corr2d()        
         m_BW = np.zeros([self.shape[0],self.shape[1]])#Imagen negra de la misma dimensión
 #        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
@@ -226,7 +270,7 @@ class Colonias:
                 # Mascara color para los bordes
                 I_color = self.color(I_gray,centros[k])
                 # Aplicación de las propiedades de region
-                I_props = self.reg_seg(I_otsu*I_color)
+                I_props = self.reg_seg(I_otsu)
                 # Watershed
                 I_wa = self.watershedDT(I_props)
                 I_wa[I_wa>0]=1
@@ -249,9 +293,200 @@ class Colonias:
                 print('Pozo no viable')
 
         labeled = label(m_BW, neighbors=8, background=0)
-        labeled_RGB = label2rgb(labeled, image=self.image)#image = imagen original
+#        labeled_RGB = label2rgb(labeled, image=self.image)#image = imagen original
+        color = self.addColor(self.image,m_BW)
         
-        return labeled_RGB,conteo
+        return m_BW,conteo,color
+    
+    
+    def processing2(self):
+        BW,I_gray = self.preprocessHSV_saturation()
+        
+#        Ivalue = self.preprocessHSV()
+#        I_gray = rgb2gray(self.image)
+        
+        centros = self.corr2d()        
+        m_BW = np.zeros([self.shape[0],self.shape[1]])#Imagen negra de la misma dimensión
+#        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
+#        'Pozo 5':[],'Pozo 6':[]}# Diccionario donde se guarda el conteo
+        conteo = []
+        for k in range(0,len(centros)):
+            try:
+                # Seccionamiento de 1 pozo
+                I_seg = self.pozo(centros[k],I_gray)
+                # Otsu por pozo
+                I_otsu = self.otsu(I_seg,I_gray,centros[k])
+                # Mascara color para los bordes
+#                I_color = self.color(I_gray,centros[k])
+                # Aplicación de las propiedades de region
+                I_props = self.reg_seg(I_otsu)
+                # Watershed
+                I_wa = self.watershedDT(I_props)
+                I_wa[I_wa>0]=1
+                # Etiquetado y conteo de las colonias
+                # 8-conectividad, fondo negro
+                labeled,num = label(
+                    I_wa, neighbors=8, background=0,
+                    return_num=True
+                )
+                
+    #            # Guarda el conteo por pozo en un diccionario
+#                conteo[ list(conteo.keys())[k] ].append(num)
+                
+                # Guarda el conteo en un arreglo
+                conteo.append(num)
+                
+                # Suma el resultado del pozo a una imagen negra (ceros)
+                m_BW = m_BW + I_wa
+            except:
+                print('Pozo no viable')
+
+        labeled = label(m_BW, neighbors=8, background=0)
+#        labeled_RGB = label2rgb(labeled, image=self.image)#image = imagen original
+        color = self.addColor(self.image,m_BW)
+        
+        return m_BW,conteo,color
+    
+    def processing3(self):
+        BW,I_gray = self.preprocessHSV_saturation()
+        
+#        Ivalue = self.preprocessHSV()
+#        I_gray = rgb2gray(self.image)
+        
+        centros = self.corr2d()        
+        m_BW = np.zeros([self.shape[0],self.shape[1]])#Imagen negra de la misma dimensión
+#        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
+#        'Pozo 5':[],'Pozo 6':[]}# Diccionario donde se guarda el conteo
+        conteo = []
+        for k in range(0,len(centros)):
+            try:
+                # Seccionamiento de 1 pozo
+                I_seg = self.pozo(centros[k],BW)
+                # Otsu por pozo
+#                I_otsu = self.otsu(I_seg,I_gray,centros[k])
+                # Mascara color para los bordes
+#                I_color = self.color(I_gray,centros[k])
+                # Aplicación de las propiedades de region
+                I_props = self.reg_seg(I_seg)
+                # Watershed
+                I_wa = self.watershedDT(I_props)
+                I_wa[I_wa>0]=1
+                # Etiquetado y conteo de las colonias
+                # 8-conectividad, fondo negro
+                labeled,num = label(
+                    I_wa, neighbors=8, background=0,
+                    return_num=True
+                )
+                
+    #            # Guarda el conteo por pozo en un diccionario
+#                conteo[ list(conteo.keys())[k] ].append(num)
+                
+                # Guarda el conteo en un arreglo
+                conteo.append(num)
+                
+                # Suma el resultado del pozo a una imagen negra (ceros)
+                m_BW = m_BW + I_wa
+            except:
+                print('Pozo no viable')
+
+        labeled = label(m_BW, neighbors=8, background=0)
+#        labeled_RGB = label2rgb(labeled, image=self.image)#image = imagen original
+        color = self.addColor(self.image,m_BW)
+        
+        return m_BW,conteo,color
+    
+# Local
+    def processing4(self):
+        BW,I_gray = self.preprocessHSV_value()
+        
+        centros = self.corr2d()        
+        m_BW = np.zeros([self.shape[0],self.shape[1]])#Imagen negra de la misma dimensión
+#        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
+#        'Pozo 5':[],'Pozo 6':[]}# Diccionario donde se guarda el conteo
+        conteo = []
+        for k in range(0,len(centros)):
+            try:
+                # Seccionamiento de 1 pozo
+                I_seg = self.pozo(centros[k],I_gray)
+                # Otsu por pozo
+                I_otsu = self.otsu(I_seg,I_gray,centros[k])
+                # Mascara color para los bordes
+#                I_color = self.color(I_gray,centros[k])
+                # Aplicación de las propiedades de region
+                I_props = self.reg_seg(I_otsu)
+                # Watershed
+                I_wa = self.watershedDT(I_props)
+                I_wa[I_wa>0]=1
+                # Etiquetado y conteo de las colonias
+                # 8-conectividad, fondo negro
+                labeled,num = label(
+                    I_wa, neighbors=8, background=0,
+                    return_num=True
+                )
+                
+    #            # Guarda el conteo por pozo en un diccionario
+#                conteo[ list(conteo.keys())[k] ].append(num)
+                
+                # Guarda el conteo en un arreglo
+                conteo.append(num)
+                
+                # Suma el resultado del pozo a una imagen negra (ceros)
+                m_BW = m_BW + I_wa
+            except:
+                print('Pozo no viable')
+
+        labeled = label(m_BW, neighbors=8, background=0)
+#        labeled_RGB = label2rgb(labeled, image=self.image)#image = imagen original
+        color = self.addColor(self.image,m_BW)
+        
+        return m_BW,conteo,color
+    
+# Global
+    def processing5(self):
+        BW,I_gray = self.preprocessHSV_value()
+        
+        centros = self.corr2d()        
+        m_BW = np.zeros([self.shape[0],self.shape[1]])#Imagen negra de la misma dimensión
+#        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
+#        'Pozo 5':[],'Pozo 6':[]}# Diccionario donde se guarda el conteo
+        conteo = []
+        for k in range(0,len(centros)):
+            try:
+                # Seccionamiento de 1 pozo
+                I_seg = self.pozo(centros[k],BW)
+                # Otsu por pozo
+#                I_otsu = self.otsu(I_seg,I_gray,centros[k])
+                # Mascara color para los bordes
+#                I_color = self.color(I_gray,centros[k])
+                # Aplicación de las propiedades de region
+                I_props = self.reg_seg(I_seg)
+                # Watershed
+                I_wa = self.watershedDT(I_props)
+                I_wa[I_wa>0]=1
+                # Etiquetado y conteo de las colonias
+                # 8-conectividad, fondo negro
+                labeled,num = label(
+                    I_wa, neighbors=8, background=0,
+                    return_num=True
+                )
+                
+    #            # Guarda el conteo por pozo en un diccionario
+#                conteo[ list(conteo.keys())[k] ].append(num)
+                
+                # Guarda el conteo en un arreglo
+                conteo.append(num)
+                
+                # Suma el resultado del pozo a una imagen negra (ceros)
+                m_BW = m_BW + I_wa
+            except:
+                print('Pozo no viable')
+
+        labeled = label(m_BW, neighbors=8, background=0)
+#        labeled_RGB = label2rgb(labeled, image=self.image)#image = imagen original
+        color = self.addColor(self.image,m_BW)
+        
+        return m_BW,conteo,color
+    
     
 #    I_seg = pozo(If2,centros[k],r_pozo)# Se recorta un pozo
 #    #            plot_comparison(I,I_seg,'Binarización Otsu')
@@ -284,3 +519,27 @@ class Colonias:
         labels = watershed(-dist, markers, mask=I)# Algoritmo basado en marcadores
         return labels
     #conncomponents
+    
+    def addColor(self,I,BW):
+        R = I[:,:,0]
+        G = I[:,:,1]
+        B = I[:,:,2]
+        s = BW.shape
+        for i in range(0,s[0]):
+            for j in range(0,s[1]):
+                if BW[i,j] == 1:
+                    R[i,j] = 255
+                    G[i,j] = 0
+                    B[i,j] = 0        
+        I[:,:,0] = R
+        I[:,:,1] = G
+        I[:,:,2] = B
+        return I
+    
+    def hist_comparison(self,original,modified,name):
+        fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(8, 4), sharex=True,
+                                       sharey=True)
+        ax1.hist(original.ravel(),256,[0,1])
+        ax1.set_title('original')
+        ax2.hist(modified.ravel(),256,[0,1])
+        ax2.set_title(name)
