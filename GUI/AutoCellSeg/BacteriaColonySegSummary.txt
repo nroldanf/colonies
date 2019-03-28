@@ -1,0 +1,13 @@
+                    Image name Colony count Mean area Mean radius Mean eccentricity 
+
+ Semillero U87 y MCF-7 (hipoxia 1Gy 05.04.2016) seg  91 471.3 9.69 0.76 
+
+ Semillero U87 y MCF-7 (hipoxia 2Gy 05.04.2016) seg  99 443.8 9.47 0.74 
+
+ Semillero U87 y MCF-7 (hipoxia 4Gy 05.04.2016) seg  76 528.4 10.20 0.77 
+
+ Semillero U87 y MCF-7 (hipoxia 6Gy 05.04.2016) seg 128 403.5 9.19 0.71 
+
+ Semillero U87 y MCF-7 (hipoxia 8Gy 05.04.2016) seg  55 554.7 11.00 0.82 
+
+ Semillero U87 y MCF-7 (hipoxia 10Gy 05.04.2016) seg  52 733.9 12.45 0.88 

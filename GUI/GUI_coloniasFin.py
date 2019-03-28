@@ -132,7 +132,7 @@ class Ui_Dialog(object):
         
         self.btnProcess = QtWidgets.QPushButton(self.gridLayoutWidget)
         self.btnProcess.setObjectName("btnProcess")
-        self.btnProcess.setIcon(QtGui.QIcon('Logos/micro'))
+        self.btnProcess.setIcon(QtGui.QIcon('Logos/if_Microscope_379436.png'))
         self.btnProcess.setIconSize(QtCore.QSize(24,24))
         self.btnProcess.clicked.connect(self.threadOne)
         
@@ -195,7 +195,7 @@ class Ui_Dialog(object):
         self.lblProcess.setText(_translate("Dialog", "Procesando..."))
         self.btnRoot.setText(_translate("Dialog", "Seleccionar imágenes"))
         self.btnLoad.setText(_translate("Dialog", "Previsualizar"))
-        self.btnProcess.setText(_translate("Dialog", "Procesar imágenes"))
+#        self.btnProcess.setText(_translate("Dialog", "Procesar imágenes"))
         self.btnLimpiar.setText(_translate("Dialog", "Limpiar"))
         self.btnRemove.setText(_translate("Dialog", "<<"))
         self.btnAdd.setText(_translate("Dialog", ">>"))
