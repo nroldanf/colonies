@@ -33,6 +33,7 @@ class Ui_Dialog(object):
         self.cont = [0,0]
         self.conteo = []
         self.timing = []
+        self.dfCounting = 0
         # *** Interfaz ***
         Dialog.setObjectName("Dialog")
         Dialog.resize(986, 675)
@@ -185,6 +186,75 @@ class Ui_Dialog(object):
         self.msg.setIcon(QtWidgets.QMessageBox.Information)
         self.msg.setVisible(False)
         
+        self.groupBoxRes = QtWidgets.QGroupBox(Dialog)
+        self.groupBoxRes.setGeometry(QtCore.QRect(700, 90, 271, 291))
+        self.groupBoxRes.setTitle("")
+        self.groupBoxRes.setObjectName("groupBoxRes")
+        self.gridLayoutWidget_2 = QtWidgets.QWidget(self.groupBoxRes)
+        self.gridLayoutWidget_2.setGeometry(QtCore.QRect(10, 40, 251, 231))
+        self.gridLayoutWidget_2.setObjectName("gridLayoutWidget_2")
+        self.gridLayout_2 = QtWidgets.QGridLayout(self.gridLayoutWidget_2)
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.lblWell2 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.lblWell2.setText("")
+        self.lblWell2.setAlignment(QtCore.Qt.AlignCenter)
+        self.lblWell2.setObjectName("lblWell2")
+        self.gridLayout_2.addWidget(self.lblWell2, 1, 1, 1, 1)
+        self.lblWell6 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.lblWell6.setText("")
+        self.lblWell6.setAlignment(QtCore.Qt.AlignCenter)
+        self.lblWell6.setObjectName("lblWell6")
+        self.gridLayout_2.addWidget(self.lblWell6, 2, 3, 1, 1)
+        self.label_6 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.label_6.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_6.setObjectName("label_6")
+        self.gridLayout_2.addWidget(self.label_6, 1, 0, 1, 1)
+        self.lblWell3 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.lblWell3.setText("")
+        self.lblWell3.setAlignment(QtCore.Qt.AlignCenter)
+        self.lblWell3.setObjectName("lblWell3")
+        self.gridLayout_2.addWidget(self.lblWell3, 2, 1, 1, 1)
+        self.lblWell5 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.lblWell5.setText("")
+        self.lblWell5.setAlignment(QtCore.Qt.AlignCenter)
+        self.lblWell5.setObjectName("lblWell5")
+        self.gridLayout_2.addWidget(self.lblWell5, 1, 3, 1, 1)
+        self.lblWell1 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.lblWell1.setText("")
+        self.lblWell1.setAlignment(QtCore.Qt.AlignCenter)
+        self.lblWell1.setObjectName("lblWell1")
+        self.gridLayout_2.addWidget(self.lblWell1, 0, 1, 1, 1)
+        self.label_9 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.label_9.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_9.setObjectName("label_9")
+        self.gridLayout_2.addWidget(self.label_9, 2, 2, 1, 1)
+        self.label_8 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.label_8.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_8.setObjectName("label_8")
+        self.gridLayout_2.addWidget(self.label_8, 2, 0, 1, 1)
+        self.lblWell4 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.lblWell4.setText("")
+        self.lblWell4.setAlignment(QtCore.Qt.AlignCenter)
+        self.lblWell4.setObjectName("lblWell4")
+        self.gridLayout_2.addWidget(self.lblWell4, 0, 3, 1, 1)
+        self.label_7 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.label_7.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_7.setObjectName("label_7")
+        self.gridLayout_2.addWidget(self.label_7, 1, 2, 1, 1)
+        self.label_4 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.label_4.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_4.setObjectName("label_4")
+        self.gridLayout_2.addWidget(self.label_4, 0, 0, 1, 1)
+        self.label_5 = QtWidgets.QLabel(self.gridLayoutWidget_2)
+        self.label_5.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_5.setObjectName("label_5")
+        self.gridLayout_2.addWidget(self.label_5, 0, 2, 1, 1)
+        self.label_16 = QtWidgets.QLabel(self.groupBoxRes)
+        self.label_16.setGeometry(QtCore.QRect(70, 10, 121, 20))
+        self.label_16.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_16.setObjectName("label_16")
+        
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -201,6 +271,14 @@ class Ui_Dialog(object):
         self.btnAdd.setText(_translate("Dialog", ">>"))
         self.btnViewRes.setText(_translate("Dialog", "Ver Resultados"))
         self.lblFolder_2.setText(_translate("Dialog", "Imágenes seleccionadas: " + str( len(self.images)) ))
+        
+        self.label_6.setText(_translate("Dialog", "Pozo 2"))
+        self.label_9.setText(_translate("Dialog", "Pozo 6"))
+        self.label_8.setText(_translate("Dialog", "Pozo 3"))
+        self.label_7.setText(_translate("Dialog", "Pozo 5"))
+        self.label_4.setText(_translate("Dialog", "Pozo 1"))
+        self.label_5.setText(_translate("Dialog", "Pozo 4"))
+        self.label_16.setText(_translate("Dialog", "Resultados del Conteo"))
 
     #Métodos asociados
     
@@ -326,9 +404,16 @@ class Ui_Dialog(object):
             self.processOne(self.images_PATH[i],ansPath,i)
         
         # Guarda el conteo en un archivo excel al terminar
-        df = pd.DataFrame(self.conteo,index=self.images)
-        with pd.ExcelWriter('Resultados_GUI/'+ now.strftime("%Y-%m-%d") + '.xlsx') as writer:
-            df.to_excel(writer, sheet_name='05.04.2016')
+#        df = pd.DataFrame(self.conteo,index=self.images)
+#        with pd.ExcelWriter('Resultados_GUI/'+ now.strftime("%Y-%m-%d") + '.xlsx') as writer:
+#            df.to_excel(writer, sheet_name='05.04.2016')
+        
+#        self.dfCounting = 
+        
+#    def showCounting(self):
+#        self.pixmap = QtGui.QPixmap(self.images_PATH[num])
+#        self.lblWel
+    
             
 
     # Método para incrementar barra de tareas
