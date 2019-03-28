@@ -406,6 +406,7 @@ class Ui_Dialog(object):
             self.btnRemove.setEnabled(False)
         else:
             self.btnRemove.setEnabled(True)
+            
         if self.cont[0] == len(self.images)-1:
             self.btnAdd.setEnabled(False)
         else:
@@ -433,11 +434,12 @@ class Ui_Dialog(object):
         # Dependiendo de la bandera visualice el original o el procesado
         if self.switchFlag == 0:
             self.viewImage(self.cont[0])
-            print("Derecha")
+            self.showCounting(self.cont[0])
+#            print("Derecha")
         else:
             self.viewImageRes(self.cont[0])
             self.showCounting(self.cont[0])
-            print("Derecha")
+#            print("Derecha")
         
     
     # Decrementa el contador para visualizar la siguiente imagen
@@ -447,11 +449,12 @@ class Ui_Dialog(object):
 #        self.viewImage(self.cont[0])
         if self.switchFlag == 0:
             self.viewImage(self.cont[0])
-            print("Izquierda")
+            self.showCounting(self.cont[0])
+#            print("Izquierda")
         else:
             self.viewImageRes(self.cont[0])
             self.showCounting(self.cont[0])
-            print("Izquierda")
+#            print("Izquierda")
     # Procesa una imagen
     def processOne(self,PATH,name,index):
         nameMono = name +'/'+ self.images[index]# Imagen BW
@@ -465,10 +468,8 @@ class Ui_Dialog(object):
         imsave(nameColor.replace('.jpg','.tiff'),color)# Guarde la imagen pseudocolor
         print(self.timing)
         self.conteo.append(conteo)# Concatena a una matriz
-        
         self.cont[1] += 1
         
-    
     def processAll(self):
         self.threadTwo()
         # Reinicie la lista con las imágenes
