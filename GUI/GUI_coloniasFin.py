@@ -30,10 +30,11 @@ class Ui_Dialog(object):
 #        self.folder_ids = []
         self.images_PATH = []
         self.images = []
-        self.cont = [0,0]
+        self.cont = [0,0]#  Apuntador del indice de la imagen y Contador de las imagenes que se han procesado
         self.conteo = []
         self.timing = []
         self.switchFlag = 0# Bandera que determina si se visualiza el original o procesado
+        self.resultsFlag = 0
         # *** Interfaz ***
         Dialog.setObjectName("Dialog")
         Dialog.resize(986, 675)
@@ -338,7 +339,8 @@ class Ui_Dialog(object):
         self.images.clear()
         self.listImags.clear()
         self.timing.clear()
-        # 0 imágenes seleccionadas
+        self.resultsFlag = 0
+        
         self.lblFolder_2.setText("Imágenes seleccionadas: " + str( len(self.images)) )
         # Limpie el label donde se muestra la imagen
         self.pixmap = QtGui.QPixmap("Logos/rembrandt.jpg")
@@ -429,16 +431,17 @@ class Ui_Dialog(object):
         # si el contador es menor a la longitud de la lista de imágenes
         if self.cont[0] < len(self.images_PATH)-1:
             self.cont[0] += 1
-#        self.viewImage(self.cont[0])
         
         # Dependiendo de la bandera visualice el original o el procesado
         if self.switchFlag == 0:
             self.viewImage(self.cont[0])
-            self.showCounting(self.cont[0])
+            if self.resultsFlag == 1:
+                self.showCounting(self.cont[0])
 #            print("Derecha")
         else:
             self.viewImageRes(self.cont[0])
-            self.showCounting(self.cont[0])
+            if self.resultsFlag == 1:
+                self.showCounting(self.cont[0])
 #            print("Derecha")
         
     
@@ -446,15 +449,15 @@ class Ui_Dialog(object):
     def left(self):
         if self.cont[0] > 0:
             self.cont[0] -= 1
-#        self.viewImage(self.cont[0])
         if self.switchFlag == 0:
             self.viewImage(self.cont[0])
-            self.showCounting(self.cont[0])
-#            print("Izquierda")
+            if self.resultsFlag == 1:
+                self.showCounting(self.cont[0])
         else:
             self.viewImageRes(self.cont[0])
-            self.showCounting(self.cont[0])
-#            print("Izquierda")
+            if self.resultsFlag == 1:
+                self.showCounting(self.cont[0])
+                
     # Procesa una imagen
     def processOne(self,PATH,name,index):
         nameMono = name +'/'+ self.images[index]# Imagen BW
@@ -501,10 +504,6 @@ class Ui_Dialog(object):
 #        with pd.ExcelWriter('Resultados_GUI/'+ now.strftime("%Y-%m-%d") + '.xlsx') as writer:
 #            df.to_excel(writer, sheet_name='05.04.2016')
 
-
-    
-        
-
     # Método para incrementar barra de tareas
     def loadBar(self):
         # Haga invisible el label y visible la barra de progreso
@@ -538,10 +537,9 @@ class Ui_Dialog(object):
         self.groupBoxRes.setVisible(True)
         
         self.switchFlag = 1
+        self.resultsFlag = 1
         
-#        self.label_2.setVisible(False) 
-#        self.label_3.setVisible(False)
-        
+
         self.cont[1] = 0
 
         
