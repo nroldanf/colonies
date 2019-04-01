@@ -7,7 +7,7 @@ Created on Fri Feb 15 10:49:59 2019
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import cv2 as cv
+#import cv2 as cv
 from skimage.io import imread
 from scipy.misc import imsave
 from skimage.color import rgb2lab
@@ -39,21 +39,21 @@ folders = ['05.04.2016','25.09.2015','26.04.2016']
 #images_aut.pop(10)
 
 # *** Otros programas ***
-gen_aut = 'Resultados_OpenCFU/'+folders[2]
+gen_aut = 'Resultados_Cellcounter/'+folders[0]
 images_aut = []
 images_aut.append(os.listdir(gen_aut))
 images_aut = images_aut[0];
-images_aut.pop(0)
-images_aut.pop(11)
+#images_aut.pop(6)
+#images_aut.pop(10)
 
 #images_aut.pop(11)
 #images_aut.pop(10)
 # *** Imágenes del conteo manual ***
-gen = 'Fotos/Imagenes_Manual/'+folders[2]
+gen = 'Fotos/Imagenes_Manual/'+folders[0]
 images = []
 images.append(os.listdir(gen))
 images = images[0]
-images  = images[0:11]
+#images  = images[0:11]
 #images.pop(0)
 #images.pop(6)
 # In[] CellProfiler
@@ -125,34 +125,49 @@ r_small = 50
 template = circle(r_small)
 se = diamond(4)#elemento estructurante para el cierre
 # **** OPENCFU *****
-umbral_G = 70
+umbral_G = 30
 #*******************
 for im in range(0,len(images)):
+    print('Analizando: ' + images[im])
+    
     I = imread(gen+'/'+images[im]);[m,n,p] = I.shape
-    I
+    I = I[:,:,0:3];
+    
     I2 = imread(gen_aut+'/'+images_aut[im])
-    I2 = resize(I2, [m,n], order=1, mode='reflect', cval=0, clip=True,preserve_range=False)
+    I2 = resize(I2, [m,n], order=2, mode='reflect', cval=0, clip=True,preserve_range=False)
     I2 = I2[:,:,0:3];
     centros = corrCruz(I,template,r_pozo,se)
     # ************************ Manuales ****************************
     BW_r1 = segColor(I,[255,0,0])# Rojo 255,0,0
+#    BW_r1 = colorPro(I,umbral_G)# segmenta el color verde
     BW_b1 = segColor(I,[0,0,255])# Azul 0,0,255
     # ********************* opencfu**********************************
     BW_au1 = colorPro(I2,umbral_G)# segmenta el color verde
     t = threshold_otsu(BW_au1[:,:,1])# plano verde y umbraliza
     BW_au1 = BW_au1[:,:,1] > t
+    BW_au1 = watershedDT(BW_au1)
     # ***************************************************************
     mBW = np.zeros([m,n])
     for p in range(0,len(centros)):
         try:
+            print('Pozo ' + str(p))
+            
             BW_r = pozo(BW_r1,centros[p],r_pozo)
             BW_b = pozo(BW_b1,centros[p],r_pozo)
             BW_au = pozo(BW_au1,centros[p],r_pozo)        
             # Obtenga las coordenadas de cada region conectada
             coodR = coordBlobs(BW_r)# lista de listas de tuplas ordenadas (x,y)
             coodB = coordBlobs(BW_b)
-            coodAu = coordBlobs(BW_au)     
+            coodAu = coordBlobs2(BW_au)     
             cA = [coodR,coodB,coodAu]
+#            
+#            if im == 2:
+#                print(len(coodAu))
+#                
+            
+    #        plt.figure()
+    #        plt.imshow(coodAu,cmap='gray')
+    #        plt.show()
             
             for k in range(0,2):# Para máscara roja y azul
                 Tp = 0    
@@ -191,15 +206,15 @@ for im in range(0,len(images)):
                         esp1.append(1)
                         print('No hay elementos en el pozo '+ str(p) + ' de ' + images[im])
                         
-            imsave(gen_aut+'/Coincidencias'+'/'+images_aut[im].replace(".png",".tiff"),mBW)# Guarde la imagen BW
+            imsave(gen_aut+'/Coincidencias'+'/'+images_aut[im].replace(".jpg",".tiff"),mBW)# Guarde la imagen BW
         except:
             print('Pozo no valido')
             
 
-plt.figure()    
-plt.imshow(mBW,cmap='gray')
-plt.show()
-            
+#plt.figure()    
+#plt.imshow(mBW,cmap='gray')
+#plt.show()
+#            
     
 TP_FP = np.array(TP_FP)
 FN_TN = np.array(FN_TN)
@@ -211,7 +226,7 @@ l1 =  str("%.2f" % np.mean(sen1)) + ' ± ' + str("%.2f" % np.std(sen1))
 l2 =  str("%.2f" % np.mean(esp1)) + ' ± ' + str("%.2f" % np.std(esp1))
 
 plt.figure()
-plt.hist(sen1,range=[0,1],label=l1)
+plt.hist(sen1,range=[-1,1],label=l1)
 plt.xlabel('Sensibilidad')
 plt.ylabel('Pozos detectados')
 plt.grid()
@@ -219,7 +234,7 @@ plt.legend()
 plt.show()
 
 plt.figure()
-plt.hist(esp1,range=[0,1],label=l2)
+plt.hist(esp1,range=[-1,1],label=l2)
 plt.xlabel('Especificidad')
 plt.ylabel('Pozos detectados')
 plt.grid()
@@ -232,8 +247,8 @@ df = pd.DataFrame(data=d)
 
 #tabla = []
 #tabla.append(df)
-with pd.ExcelWriter('OpenCFU_26.04.2016' + '.xlsx') as writer:
-            df.to_excel(writer, sheet_name='26.04.2016')
+#with pd.ExcelWriter('CellCounter_05.04.2016' + '.xlsx') as writer:
+#            df.to_excel(writer, sheet_name='05.04.2016')
 
 # In[]
 def loadImages(gen='Imagenes/'):
@@ -282,6 +297,13 @@ def segColor(I,tri):
 def coordBlobs(BW):
     coord = []
     lb = label(BW,neighbors=8, background=0)
+    for region in regionprops(lb):
+        coord.append(region.coords)#matriz de coordenadas
+    return coord
+
+def coordBlobs2(lb):
+    coord = []
+    lb = lb.astype('int')
     for region in regionprops(lb):
         coord.append(region.coords)#matriz de coordenadas
     return coord
@@ -385,7 +407,7 @@ def colorPro(I,umbral):
                 I[i,j,2] = 0
     return I
 
-def watershedDT(self,I):
+def watershedDT(I):
     dist = distance_transform_edt(I)
     # Máximos locales hallados en una vecindad de 3x3
     local_maxi = peak_local_max(dist, indices=False, footprint=np.ones((3, 3)),
@@ -394,4 +416,5 @@ def watershedDT(self,I):
     markers = ndi.label(local_maxi)[0]# Lo convierte a una matriz de enteros
     # Se invierte para que así los máximos ahora sean mínimos (catch basins)
     labels = watershed(-dist, markers, mask=I)# Algoritmo basado en marcadores
+    
     return labels
