@@ -123,14 +123,14 @@ class Colonias:
         
         return centros
     
-    def pozo(self,c,m_I):
+    def pozo(self,c,m_I,r_pozo):
 #        m_I = self.mejoraConstraste()
         I_new = np.zeros([self.shape[0],self.shape[1]])
-        n = [c[1]-self.r_pozo,c[1]+self.r_pozo,c[0]-self.r_pozo,c[0]+self.r_pozo]
+        n = [c[1]-r_pozo,c[1]+r_pozo,c[0]-r_pozo,c[0]+r_pozo]
         for i in range(n[0],n[1]):
             for j in range(n[2],n[3]):
                 d = np.sqrt(abs((c[1]-i)**2+(c[0]-j)**2)) 
-                if d < self.r_pozo:
+                if d < r_pozo:
                     I_new[i,j] = m_I[i,j]
         return I_new
     
@@ -146,8 +146,8 @@ class Colonias:
     
         
     
-    def otsu(self,I_pozo,I_gray,centro):
-        I = I_gray[(centro[1]-self.r_pozo):(centro[1]+self.r_pozo),(centro[0]-self.r_pozo):(centro[0]+self.r_pozo)]
+    def otsu(self,I_pozo,I_gray,centro,r_pozo):
+        I = I_gray[(centro[1]-r_pozo):(centro[1]+r_pozo),(centro[0]-r_pozo):(centro[0]+r_pozo)]
         thresh = threshold_otsu(I)
         BW = I_pozo > thresh
         return BW
@@ -257,7 +257,11 @@ class Colonias:
 #        Ivalue = self.preprocessHSV()
 #        I_gray = rgb2gray(self.image)
         
-        centros = self.corr2d()        
+        #centros = self.corr2d()        
+        c = houghcirc()
+        r_pozo = c[:,2]
+        centros = c[:,0:2]
+        
         m_BW = np.zeros([self.shape[0],self.shape[1]])#Imagen negra de la misma dimensión
 #        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
 #        'Pozo 5':[],'Pozo 6':[]}# Diccionario donde se guarda el conteo
@@ -265,11 +269,11 @@ class Colonias:
         for k in range(0,len(centros)):
             try:
                 # Seccionamiento de 1 pozo
-                I_seg = self.pozo(centros[k],I_gray)
+                I_seg = self.pozo(centros[k],I_gray,r_pozo[k])
                 # Otsu por pozo
-                I_otsu = self.otsu(I_seg,I_gray,centros[k])
+                I_otsu = self.otsu(I_seg,I_gray,centros[k],r_pozo[k])
                 # Mascara color para los bordes
-                I_color = self.color(I_gray,centros[k])
+                #I_color = self.color(I_gray,centros[k])
                 # Aplicación de las propiedades de region
                 I_props = self.reg_seg(I_otsu)
                 # Watershed
@@ -446,7 +450,9 @@ class Colonias:
     def processing5(self):
         BW,I_gray = self.preprocessHSV_value()
         
-        centros = self.corr2d()        
+        #centros = self.corr2d()        
+        
+        
         m_BW = np.zeros([self.shape[0],self.shape[1]])#Imagen negra de la misma dimensión
 #        conteo = {'Pozo 1':[],'Pozo 2':[],'Pozo 3':[],'Pozo 4':[],
 #        'Pozo 5':[],'Pozo 6':[]}# Diccionario donde se guarda el conteo
@@ -544,3 +550,14 @@ class Colonias:
         ax1.set_title('original')
         ax2.hist(modified.ravel(),256,[0,1])
         ax2.set_title(name)
+        
+    def houghcirc(self):
+        cimg = cv.cvtColor(self.image,cv.COLOR_BGR2GRAY)      
+        m = self.shape
+        cent = cv.HoughCircles(cimg,cv.HOUGH_GRADIENT,1,(round(m[0]/5)*2),param1=26,param2=20,minRadius=round(m[0]/5)-1,maxRadius=round(m[0]/5)+12)
+        cent = np.uint16(np.around(cent)).reshape((6, 3))
+        cent = cent[cent[:,1].argsort()]
+        for i in [0,3]:
+            cent[i:i+3,:] = cent[cent[i:i+3,0].argsort()+i]
+        return cent
+        
