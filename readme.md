@@ -1,25 +1,25 @@
-# Breve descripción del algoritmo utilizado
-Automatic system for colony counter using DIP.
-Sistema automático para conteo de colonias usando técnicas de DIP.
+# Brief Description of the Algorithm Used
 
-Proceso hasta ahora empleado:
+Automatic system for colony counting using DIP techniques.
 
-1. Conversión a escala de grises.
+Process employed so far:
 
-2. Mejora de contraste lineal.
+1. `Grayscale conversion`.
 
-3. Determinación de los centros de los pozos.
-  3.1. Detección de bordes por método de Canny.
-  3.2. Dilatación con elemento estructurante tipo diamante para definir mejor las formas circulares del recipiente de las cajas de Petri.
-  3.3. Correlación cruzada con plantillas circulares binarias generadas.
-  3.4. Encontrar los centros de los pozos por ubicación por medio del radio del pozo.
+2. `Linear contrast enhancement`.
 
-4. Seccionamiento de los pozos: comprobando todos aquellos pixeles que se encontraran dentro de un círculo con un radio promedio especificado haciendo uso de los centros anteriormente obtenidos.
+3. `Determination of the petri-dish centers`.
+   3.1. Edge detection using the Canny method.
+   3.2. Dilation with a diamond-shaped structuring element to better define the circular shapes of the Petri dish wells.
+   3.3. Cross-correlation with generated binary circular templates.
+   3.4. Finding the centers of the wells by locating them using the petri-dish radius.
 
-5. Umbralización: mediante el método de Otsu se determina un umbral el cuál se escala por un factor igual al promedio de la imagen con el cual se umbraliza la imagen.
+4. `Petri-dish segmentation`: verifying all pixels that are within a circle with a specified average radius using the previously obtained centers.
 
-6. Segmentación de las colonias de los bordes por distancia euclidiana en el espacio de color CIE L*a*b.
+5. `Thresholding`: determining a threshold using Otsu's method, which is scaled by a factor equal to the average of the image, and then applying this threshold to the image.
 
-7. Eliminación de las colonias que no tengan más de 50 células haciendo uso de propiedades geométricas de las regiones.
+6. `Segmentation of the colonies from the edges` using Euclidean distance in the CIE L*a*b color space.
 
-8 Etiquetado y conteo: Se etiquetan las regiones que posean cierta conectividad y luego se realiza el conteo.
+7. `Elimination of colonies that do not have more than 50 cells` using geometric properties of the regions.
+
+8. `Labeling and counting`: regions with certain connectivity are labeled and then counted.
